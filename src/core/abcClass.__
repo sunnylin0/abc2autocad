@@ -1,0 +1,19 @@
+import './abc2svg'
+import './deco'
+import './draw'
+import './format'
+import './front'
+import './music'
+import './parse'
+import './subs'
+import './svg'
+import './tune'
+import './lyrics'
+import './gchord'
+
+
+
+
+//export let abc2svg 
+//abc2svg.Abc = new Abc()
+export default  Abc

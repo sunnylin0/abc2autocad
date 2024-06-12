@@ -1,15 +1,324 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
-
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{6957AE61-FC54-4184-8ABA-DD4930C4AC03}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>abc2autocad</RootNamespace>
+    <AssemblyName>abc2autocad</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
   </PropertyGroup>
-
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <LangVersion>8.0</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <LangVersion>8.0</LangVersion>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Interop.AutoCAD">
-      <HintPath>bin\Release\netcoreapp3.1\Interop.AutoCAD.dll</HintPath>
-    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
-
+  <ItemGroup>
+    <Compile Include="abc.cs" />
+    <Compile Include="abc2svg.cs" />
+    <Compile Include="Class1.cs" />
+    <Compile Include="config.cs" />
+    <Compile Include="deco.cs" />
+    <Compile Include="draw.cs" />
+    <Compile Include="Form1.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form1.Designer.cs">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </Compile>
+    <Compile Include="format.cs" />
+    <Compile Include="front.cs" />
+    <Compile Include="gchord.cs" />
+    <Compile Include="jianpu.cs" />
+    <Compile Include="lyrics.cs" />
+    <Compile Include="moddules.cs" />
+    <Compile Include="music.cs" />
+    <Compile Include="obj\Debug\.NETFramework,Version=v4.6.AssemblyAttributes.cs" />
+    <Compile Include="obj\Release\netcoreapp3.1\.NETCoreApp,Version=v3.1.AssemblyAttributes.cs" />
+    <Compile Include="obj\Release\netcoreapp3.1\autocad_part2.AssemblyInfo.cs" />
+    <Compile Include="parse.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="subs.cs" />
+    <Compile Include="svg.cs" />
+    <Compile Include="test\Form1.cs" />
+    <Compile Include="test\Form1.Designer.cs">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </Compile>
+    <Compile Include="test\obj\Debug\.NETFramework,Version=v4.7.2.AssemblyAttributes.cs" />
+    <Compile Include="test\Program.cs" />
+    <Compile Include="test\Properties\AssemblyInfo.cs" />
+    <Compile Include="test\Properties\Resources.Designer.cs" />
+    <Compile Include="test\Properties\Settings.Designer.cs" />
+    <Compile Include="tune.cs" />
+    <Compile Include="types.cs" />
+    <Compile Include="typesInterface.cs" />
+    <EmbeddedResource Include="Form1.resx">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="obj\Release\netcoreapp3.1\autocad_part2.Form1.resources" />
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="test\Form1.resx">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="test\obj\Debug\test.Form1.resources" />
+    <EmbeddedResource Include="test\obj\Debug\test.Properties.Resources.resources" />
+    <EmbeddedResource Include="test\Properties\Resources.resx" />
+    <None Include="bin\Debug\netcoreapp3.1\autocad_part2.deps.json" />
+    <None Include="bin\Debug\netcoreapp3.1\autocad_part2.runtimeconfig.dev.json" />
+    <None Include="bin\Debug\netcoreapp3.1\autocad_part2.runtimeconfig.json" />
+    <None Include="bin\Release\netcoreapp3.1\autocad_part2.deps.json" />
+    <None Include="bin\Release\netcoreapp3.1\autocad_part2.runtimeconfig.dev.json" />
+    <None Include="bin\Release\netcoreapp3.1\autocad_part2.runtimeconfig.json" />
+    <None Include="bin\Release\netcoreapp3.1\Interop.AutoCAD.il" />
+    <None Include="obj\autocad_part2.csproj.nuget.dgspec.json" />
+    <None Include="obj\autocad_part2.csproj.nuget.g.props" />
+    <None Include="obj\autocad_part2.csproj.nuget.g.targets" />
+    <None Include="obj\project.assets.json" />
+    <None Include="obj\project.nuget.cache" />
+    <None Include="obj\Release\netcoreapp3.1\autocad_part2.AssemblyInfoInputs.cache" />
+    <None Include="obj\Release\netcoreapp3.1\autocad_part2.assets.cache" />
+    <None Include="obj\Release\netcoreapp3.1\autocad_part2.csproj.AssemblyReference.cache" />
+    <None Include="obj\Release\netcoreapp3.1\autocad_part2.csproj.CoreCompileInputs.cache" />
+    <None Include="obj\Release\netcoreapp3.1\autocad_part2.csproj.GenerateResource.cache" />
+    <None Include="obj\Release\netcoreapp3.1\autocad_part2.designer.deps.json" />
+    <None Include="obj\Release\netcoreapp3.1\autocad_part2.designer.runtimeconfig.json" />
+    <None Include="obj\Release\netcoreapp3.1\autocad_part2.GeneratedMSBuildEditorConfig.editorconfig" />
+    <None Include="obj\Release\netcoreapp3.1\autocad_part2.genruntimeconfig.cache" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <None Include="src\.vs\abc2svg-5edeb46e1b\config\applicationhost.config" />
+    <None Include="src\.vs\ProjectSettings.json" />
+    <None Include="src\.vs\slnx.sqlite" />
+    <None Include="src\.vs\VSWorkspaceState.json" />
+    <None Include="src\abc2odt" />
+    <None Include="src\abc2svg.ttf" />
+    <None Include="src\abcjsc" />
+    <None Include="src\abcmjs" />
+    <None Include="src\abcnode" />
+    <None Include="src\abcqjs" />
+    <None Include="src\abctopdf" />
+    <None Include="src\abcv8" />
+    <None Include="src\build" />
+    <None Include="src\build.ninja" />
+    <None Include="src\COPYING" />
+    <None Include="src\COPYING.LESSER" />
+    <None Include="src\core\abcClass.__" />
+    <None Include="src\core\index.js.map" />
+    <None Include="src\core\license" />
+    <None Include="src\core\modules.js.map" />
+    <None Include="src\dist_bin" />
+    <None Include="src\editor\edit.xhtml" />
+    <None Include="src\font.js.map" />
+    <None Include="src\font\abc2svg.sfd" />
+    <None Include="src\musicfont.ttf" />
+    <None Include="src\package_xx.json" />
+    <None Include="src\README.md" />
+    <None Include="src\util\json.js.map" />
+    <None Include="test\App.config" />
+    <None Include="test\bin\Debug\test.exe.config" />
+    <None Include="test\obj\Debug\DesignTimeResolveAssemblyReferences.cache" />
+    <None Include="test\obj\Debug\DesignTimeResolveAssemblyReferencesInput.cache" />
+    <None Include="test\obj\Debug\test.csproj.AssemblyReference.cache" />
+    <None Include="test\obj\Debug\test.csproj.CoreCompileInputs.cache" />
+    <None Include="test\obj\Debug\test.csproj.GenerateResource.cache" />
+    <None Include="test\Properties\Settings.settings" />
+    <None Include="test\test.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <TypeScriptCompile Include="Script1.ts" />
+    <TypeScriptCompile Include="src\aa2.ts" />
+    <TypeScriptCompile Include="src\abcIndex.ts" />
+    <TypeScriptCompile Include="src\core\abc2svg.ts" />
+    <TypeScriptCompile Include="src\core\abc2svghead.ts" />
+    <TypeScriptCompile Include="src\core\config.ts" />
+    <TypeScriptCompile Include="src\core\deco.ts" />
+    <TypeScriptCompile Include="src\core\draw.ts" />
+    <TypeScriptCompile Include="src\core\format.ts" />
+    <TypeScriptCompile Include="src\core\front.ts" />
+    <TypeScriptCompile Include="src\core\gchord.ts" />
+    <TypeScriptCompile Include="src\core\index.ts" />
+    <TypeScriptCompile Include="src\core\lyrics.ts" />
+    <TypeScriptCompile Include="src\core\mei.ts" />
+    <TypeScriptCompile Include="src\core\modules.ts" />
+    <TypeScriptCompile Include="src\core\music.ts" />
+    <TypeScriptCompile Include="src\core\parse.ts" />
+    <TypeScriptCompile Include="src\core\subs.ts" />
+    <TypeScriptCompile Include="src\core\svg.ts" />
+    <TypeScriptCompile Include="src\core\tail.ts" />
+    <TypeScriptCompile Include="src\core\tune.ts" />
+    <TypeScriptCompile Include="src\font.ts" />
+    <TypeScriptCompile Include="src\modules\ambitus.ts" />
+    <TypeScriptCompile Include="src\modules\break.ts" />
+    <TypeScriptCompile Include="src\modules\capo.ts" />
+    <TypeScriptCompile Include="src\modules\chordnames.ts" />
+    <TypeScriptCompile Include="src\modules\clair.ts" />
+    <TypeScriptCompile Include="src\modules\clip.ts" />
+    <TypeScriptCompile Include="src\modules\combine.ts" />
+    <TypeScriptCompile Include="src\modules\diag.ts" />
+    <TypeScriptCompile Include="src\modules\equalbars.ts" />
+    <TypeScriptCompile Include="src\modules\gamelan.ts" />
+    <TypeScriptCompile Include="src\modules\grid.ts" />
+    <TypeScriptCompile Include="src\modules\grid2.ts" />
+    <TypeScriptCompile Include="src\modules\grid3.ts" />
+    <TypeScriptCompile Include="src\modules\jazzchord.ts" />
+    <TypeScriptCompile Include="src\modules\jianpu.ts" />
+    <TypeScriptCompile Include="src\modules\mdnn.ts" />
+    <TypeScriptCompile Include="src\modules\MIDI.ts" />
+    <TypeScriptCompile Include="src\modules\nns.ts" />
+    <TypeScriptCompile Include="src\modules\page.ts" />
+    <TypeScriptCompile Include="src\modules\pedline.ts" />
+    <TypeScriptCompile Include="src\modules\perc.ts" />
+    <TypeScriptCompile Include="src\modules\psvg.ts" />
+    <TypeScriptCompile Include="src\modules\roman.ts" />
+    <TypeScriptCompile Include="src\modules\soloffs.ts" />
+    <TypeScriptCompile Include="src\modules\sth.ts" />
+    <TypeScriptCompile Include="src\modules\strftime.ts" />
+    <TypeScriptCompile Include="src\modules\strtab.ts" />
+    <TypeScriptCompile Include="src\modules\temper.ts" />
+    <TypeScriptCompile Include="src\modules\tropt.ts" />
+    <TypeScriptCompile Include="src\modules\wps.ts" />
+    <TypeScriptCompile Include="src\types\Abc2Svg.d.ts" />
+    <TypeScriptCompile Include="src\util\abcdoc.ts" />
+    <TypeScriptCompile Include="src\util\abcemb.ts" />
+    <TypeScriptCompile Include="src\util\abcemb1.ts" />
+    <TypeScriptCompile Include="src\util\abcemb2.ts" />
+    <TypeScriptCompile Include="src\util\abcweb.ts" />
+    <TypeScriptCompile Include="src\util\abcweb1.ts" />
+    <TypeScriptCompile Include="src\util\abcweb2.ts" />
+    <TypeScriptCompile Include="src\util\chord.ts" />
+    <TypeScriptCompile Include="src\util\follow.ts" />
+    <TypeScriptCompile Include="src\util\json.ts" />
+    <TypeScriptCompile Include="src\util\play.ts" />
+    <TypeScriptCompile Include="src\util\sf2-parser.ts" />
+    <TypeScriptCompile Include="src\util\sndaud.ts" />
+    <TypeScriptCompile Include="src\util\sndgen.ts" />
+    <TypeScriptCompile Include="src\util\sndmem.ts" />
+    <TypeScriptCompile Include="src\util\sndmid.ts" />
+    <TypeScriptCompile Include="src\util\toaudio.ts" />
+    <TypeScriptCompile Include="src\util\toaudio5.ts" />
+    <TypeScriptCompile Include="src\util\tomidi5.ts" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="bin\Debug\netcoreapp3.1\autocad_part2.dll" />
+    <Content Include="bin\Debug\netcoreapp3.1\autocad_part2.exe" />
+    <Content Include="bin\Debug\netcoreapp3.1\autocad_part2.pdb" />
+    <Content Include="bin\Debug\netcoreapp3.1\Interop.AutoCAD.dll" />
+    <Content Include="bin\Release\netcoreapp3.1\autocad_part2.dll" />
+    <Content Include="bin\Release\netcoreapp3.1\autocad_part2.exe" />
+    <Content Include="bin\Release\netcoreapp3.1\autocad_part2.pdb" />
+    <Content Include="bin\Release\netcoreapp3.1\ilasm.exe" />
+    <Content Include="bin\Release\netcoreapp3.1\ildasm.exe" />
+    <Content Include="bin\Release\netcoreapp3.1\Interop.AutoCAD.dll" />
+    <Content Include="bin\Release\netcoreapp3.1\Interop.AutoCAD.res" />
+    <Content Include="bin\Release\netcoreapp3.1\Interop.AutoCAD_old.dll" />
+    <Content Include="obj\Release\netcoreapp3.1\apphost.exe" />
+    <Content Include="obj\Release\netcoreapp3.1\autocad_part2.csproj.FileListAbsolute.txt" />
+    <Content Include="obj\Release\netcoreapp3.1\autocad_part2.dll" />
+    <Content Include="obj\Release\netcoreapp3.1\autocad_part2.pdb" />
+    <Content Include="src\aa.js" />
+    <Content Include="src\cmdline.js" />
+    <Content Include="src\core\abc2svg.old.js" />
+    <Content Include="src\core\index.js" />
+    <Content Include="src\core\modules.js" />
+    <Content Include="src\edit-de.js" />
+    <Content Include="src\edit-en.js" />
+    <Content Include="src\edit-fr.js" />
+    <Content Include="src\edit-it.js" />
+    <Content Include="src\edit-pt_BR.js" />
+    <Content Include="src\editor\abckbd.js" />
+    <Content Include="src\editor\abckbd2.js" />
+    <Content Include="src\editor\edit.css" />
+    <Content Include="src\editor\edit.js" />
+    <Content Include="src\err-de.js" />
+    <Content Include="src\err-en.js" />
+    <Content Include="src\err-fr.js" />
+    <Content Include="src\err-it.js" />
+    <Content Include="src\err-pt_BR.js" />
+    <Content Include="src\font.js" />
+    <Content Include="src\jsmin.js" />
+    <Content Include="src\MIT.txt" />
+    <Content Include="src\Scc1t2\10.js" />
+    <Content Include="src\Scc1t2\7.js" />
+    <Content Include="src\Scc1t2\8.js" />
+    <Content Include="src\Scc1t2\9.js" />
+    <Content Include="src\toabc.js" />
+    <Content Include="src\toabw.js" />
+    <Content Include="src\tohtml.js" />
+    <Content Include="src\tolead.js" />
+    <Content Include="src\tomei.js" />
+    <Content Include="src\tonotes.js" />
+    <Content Include="src\toodt.js" />
+    <Content Include="src\toparam.js" />
+    <Content Include="src\toxhtml.js" />
+    <Content Include="src\types\abc2svgTest.html" />
+    <Content Include="src\types\abc2svgTest.js" />
+    <Content Include="src\types\abc2svgUtil.js" />
+    <Content Include="src\types\type_TypeNum2.js" />
+    <Content Include="src\util\json.js" />
+    <Content Include="test\bin\Debug\test.exe" />
+    <Content Include="test\bin\Debug\test.pdb" />
+    <Content Include="test\obj\Debug\test.csproj.FileListAbsolute.txt" />
+    <Content Include="test\obj\Debug\test.exe" />
+    <Content Include="test\obj\Debug\test.pdb" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="autocad_part2\" />
+    <Folder Include="src\.vs\abc2svg-5edeb46e1b\v16\" />
+    <Folder Include="src\core\asdf\" />
+    <Folder Include="test\obj\Debug\TempPE\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
