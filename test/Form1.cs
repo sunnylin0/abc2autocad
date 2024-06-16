@@ -11,6 +11,96 @@ using System.Windows.Forms;
 
 namespace test
 {
+
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+
+        Dictionary<string, string> ch_alias { get; set; }
+        private (string key, string val)[] _ch_alias = {
+               ("maj", ""       ),
+               ("min", "m"      ),
+               ("-", "m"        ),
+               ("°", "dim"      ),
+               ("+", "aug"      ),
+               ("+5", "aug"     ),
+               ("maj7", "M7"    ),
+               ("Δ7", "M7"     ),
+               ("Δ", "M7"      ),
+               ("min7", "m7"    ),
+               ("-7", "m7"      ),
+               ("ø7", "m7b5"    ),
+               ("°7", "dim7"    ),
+               ("min+7", "m+7"  ),
+               ("aug7", "+7"    ),
+               ("7+5", "+7"     ),
+               ("7#5", "+7"     ),
+               ("sus", "sus4"   ),
+                ( "7sus", "7sus4" )
+            };
+
+        // font weight
+        Dictionary<string, int> ft_w { get; set; }
+        private (string key, int val)[] _ft_w ={
+                       ("thin", 100 ),
+                       ("extralight", 200) ,
+                       ("light", 300     ) ,
+                       ("regular", 400   ) ,
+                       ("medium", 500    ) ,
+                       ("semi", 600      ) ,
+                       ("demi", 600      ) ,
+                       ("semibold", 600  ) ,
+                       ("demibold", 600  ) ,
+                       ("bold", 700      ) ,
+                       ("extrabold", 800 ) ,
+                       ("ultrabold", 800 ) ,
+                       ("black", 900     ) ,
+                       ("heavy", 900 ) };
+
+
+        public void Abc2Svg()
+        {
+            (string key, string val) tch;
+            for (int ii = 0; ii < _ch_alias.Length; ii++)
+            {
+                //tch = _ch_alias[ii];
+                Debug.Print(_ch_alias[ii].key + "  " + _ch_alias[ii].val);
+                //Debug.Print(tch.key + "  " +tch.val);
+            }
+            //foreach ((string key, string val) cch in _ch_alias)
+            //{
+            //    Debug.Print(cch);
+            //}
+
+
+        }
+        private void button1_Click(object sender, EventArgs e)
+        {
+            Abc2Svg();
+            Dictionary<string, int> aa = new Dictionary<string, int>
+            {
+                {"a1",33 },
+                {"a2",33 },
+                {"a3",33 },
+                {"a4",33 }
+            };
+            
+            //List<double> dd = new List<double>();
+            //dd[3] = 33.4;
+            //MessageBox.Show(dd[3].ToString());
+        }
+
+
+
+
+
+
+
+    }
     public interface Ifly
     {
 
@@ -111,85 +201,6 @@ namespace test
     }
 
 
-    public partial class Form1 : Form
-    {
-        public Form1()
-        {
-            InitializeComponent();
-        }
-
-
-        Dictionary<string, string> ch_alias { get; set; }
-        private (string key, string val)[] _ch_alias = {
-               ("maj", ""       ),
-               ("min", "m"      ),
-               ("-", "m"        ),
-               ("°", "dim"      ),
-               ("+", "aug"      ),
-               ("+5", "aug"     ),
-               ("maj7", "M7"    ),
-               ("Δ7", "M7"     ),
-               ("Δ", "M7"      ),
-               ("min7", "m7"    ),
-               ("-7", "m7"      ),
-               ("ø7", "m7b5"    ),
-               ("°7", "dim7"    ),
-               ("min+7", "m+7"  ),
-               ("aug7", "+7"    ),
-               ("7+5", "+7"     ),
-               ("7#5", "+7"     ),
-               ("sus", "sus4"   ),
-                ( "7sus", "7sus4" )
-            };
-
-        // font weight
-        Dictionary<string, int> ft_w { get; set; }
-        private (string key, int val)[] _ft_w ={
-                       ("thin", 100 ),
-                       ("extralight", 200) ,
-                       ("light", 300     ) ,
-                       ("regular", 400   ) ,
-                       ("medium", 500    ) ,
-                       ("semi", 600      ) ,
-                       ("demi", 600      ) ,
-                       ("semibold", 600  ) ,
-                       ("demibold", 600  ) ,
-                       ("bold", 700      ) ,
-                       ("extrabold", 800 ) ,
-                       ("ultrabold", 800 ) ,
-                       ("black", 900     ) ,
-                       ("heavy", 900 ) };
-
-
-        public void Abc2Svg()
-        {
-            (string key, string val) tch;
-            for (int ii = 0; ii < _ch_alias.Length; ii++)
-            {
-                //tch = _ch_alias[ii];
-                Debug.Print(_ch_alias[ii].key + "  " + _ch_alias[ii].val);
-                //Debug.Print(tch.key + "  " +tch.val);
-            }
-            //foreach ((string key, string val) cch in _ch_alias)
-            //{
-            //    Debug.Print(cch);
-            //}
-
-
-        }
-        private void button1_Click(object sender, EventArgs e)
-        {
-            Abc2Svg();
-
-        }
-
-
-
-
-
-
-
-    }
 
 
 }

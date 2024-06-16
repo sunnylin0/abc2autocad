@@ -62,7 +62,7 @@ var output = "",		// output buffer
 
 // glyphs in music font
 var tgls = {
-    "mtr ": { x: 0, y: 0, c: "\u0020" },	// space
+    "mtr": { x: 0, y: 0, c: "\u0020" },	// space
     brace: { x: 0, y: 0, c: "\ue000" },
     lphr: { x: 0, y: 23, c: "\ue030" },
     mphr: { x: 0, y: 23, c: "\ue038" },

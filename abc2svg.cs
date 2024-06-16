@@ -10,7 +10,7 @@ namespace autocad_part2
         static dynamic user = new System.Dynamic.ExpandoObject();
 
         // constants
-        static readonly dynamic C = abc2svg.C;
+        //static readonly abc2svg.C C = new abc2svg.C;
 
         // mask some unsafe functions
         static Action require = EmptyFunction,
@@ -39,7 +39,7 @@ namespace autocad_part2
 
         const int IN = 96; // resolution 96 PPI
         const double CM = 37.8; // 1 inch = 2.54 centimeter
-        const double YSTEP; // number of steps for y offsets
+        double YSTEP; // number of steps for y offsets
 
         // error texts
         static readonly Dictionary<string, string> errs = new Dictionary<string, string>
@@ -148,7 +148,7 @@ namespace autocad_part2
             user.errmsg(h + txt, l, c);
         }
 
-        static void error(int sev, dynamic s, string msg, object a1 = null, object a2 = null, object a3 = null, object a4 = null)
+        static void error(int sev, VoiceItem s, string msg, object a1 = null, object a2 = null, object a3 = null, object a4 = null)
         {
             if (sev == 0 && cfmt.quiet)
                 return;
@@ -208,7 +208,7 @@ namespace autocad_part2
 
         static void syntax(int sev, string msg, object a1 = null, object a2 = null, object a3 = null, object a4 = null)
         {
-            var s = new
+            VoiceItem s= new VoiceItem
             {
                 fname = parse.fname,
                 istart = parse.istart + parse.line.index
@@ -233,23 +233,23 @@ namespace autocad_part2
     //    public Meter meter { get; set; }
     //}
 
-    //public class Meter
+    ////public class Meter
+    ////{
+    ////    public dynamic type { get; set; }
+    ////    public int wmeasure { get; set; }
+    ////    public List<object> a_meter { get; set; }
+    ////}
+
+    //public class Information { }
+
+    //public class Parse
     //{
-    //    public dynamic type { get; set; }
-    //    public int wmeasure { get; set; }
-    //    public List<object> a_meter { get; set; }
+    //    public Dictionary<string, object> ctx { get; set; }
+    //    public string prefix { get; set; }
+    //    public int state { get; set; }
+    //    public List<object> ottava { get; set; }
+    //    public ScanBuf line { get; set; }
     //}
-
-    public class Information { }
-
-    public class Parse
-    {
-        public Dictionary<string, object> ctx { get; set; }
-        public string prefix { get; set; }
-        public int state { get; set; }
-        public List<object> ottava { get; set; }
-        public ScanBuf line { get; set; }
-    }
 
 
 

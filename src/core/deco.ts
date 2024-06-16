@@ -670,11 +670,12 @@ function deco_add(param) {
 // nm 是裝飾的名稱
 // nmd 是表 'decos' 中定義的名稱
 /* 字元數：2305 */
-function deco_def(nm, nmd?) {
+function deco_def(nm:string, nmd?:string) {
 	if (!nmd)
 		nmd = nm
-    var a, dd, dd2, nm2, c, i, elts, str, hd,
-	text = decos[nmd]
+	var a, dd: decorationItem, dd2: decorationItem;
+	var nm2, c, i, elts, str: string, hd;
+	var text:string = decos[nmd];
 
 	// check if a long decoration with number
 	if (!text && /\d[()]$/.test(nmd))
@@ -790,42 +791,42 @@ function deco_def(nm, nmd?) {
 // @s = 註解符號
 // @nt1 = 注意
 /* 字元數：557 */
-function do_ctie(nm, s, nt1) {
-    var	nt2 = cross[nm],
+function do_ctie(nm: string, s: voiceItem, not1) {
+    var	not2 = cross[nm],
 	nm2 = nm.slice(0, -1) + (nm.slice(-1) == '(' ? ')' : '(')
 
-	if (nt2) {
+	if (not2) {
 		error(1, s, "Conflict on !$1!", nm)
 		return
 	}
-	nt1.s = s
-	nt2 = cross[nm2]
-	if (!nt2) {
-		cross[nm] = nt1		// keep the start/end
+	not1.s = s
+	not2 = cross[nm2]
+	if (!not2) {
+		cross[nm] = not1		// keep the start/end
 		return
 	}
 	if (nm.slice(-1) == ')') {
-		nt2 = nt1
-		nt1 = cross[nm2]
+		not2 = not1
+		not1 = cross[nm2]
 	}
 	cross[nm2] = null
-	if (nt1.midi != nt2.midi
-	 || nt1.s.time + nt1.s.dur != nt2.s.time) {
+	if (not1.midi != not2.midi
+	 || not1.s.time + not1.s.dur != not2.s.time) {
 		error(1, s, "Bad tie")
 	} else {
-		nt1.tie_ty = C.SL_AUTO
-		nt1.tie_e = nt2
-		nt2.tie_s = nt1
-		nt1.s.ti1 = nt2.s.ti2 = true
+		not1.tie_ty = C.SL_AUTO
+		not1.tie_e = not2
+		not2.tie_s = not1
+		not1.s.ti1 = not2.s.ti2 = true
 	}
 } 
 
 // get/create the definition of a decoration
 // 取得/建立裝飾的定義
 /* 字元數：555 */
-function get_dd(nm) {
-    var	ty, p,
-	dd = dd_tb[nm]
+function get_dd(nm:string) {
+	var ty, p
+	var	dd: decorationItem = dd_tb[nm]
 
 	if (dd)
 		return dd
@@ -859,8 +860,9 @@ function get_dd(nm) {
 /* -- convert the decorations -- */
 /* -- 轉換裝飾 -- */
 /* 字元數：3936 */
-function deco_cnv(s, prev?) {
-    var	i, j, dd, nm, note, s1, court
+function deco_cnv(s: voiceItem, prev?: voiceItem) {
+	var i, j, dd, nm, court
+	var note: noteItem, s1: voiceItem;
 
 	while (1) {
 		nm = a_dcn.shift()
@@ -1050,7 +1052,7 @@ function deco_cnv(s, prev?) {
 // 裝飾位於全域數組 a_dcn 中
 /* 字元數：789 */
 function dh_cnv(s, nt) {
-    var	k, nm, dd
+    var	 nm, dd
 
 	while (1) {
 		nm = a_dcn.shift()

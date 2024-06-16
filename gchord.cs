@@ -11,19 +11,22 @@ namespace autocad_part2
         string note_names = "CDEFGAB";
         string[] acc_name = { "bb", "b", "", "#", "##" };
 
-        static void parse_gchord(string type)
+        // -- parse a chord symbol / annotation --
+        // the result is added in the global variable a_gch
+        // 'type' may be a single '"' or a string '"xxx"' created by U:
+        void parse_gchord(string type)
         {
             char c;
             string text, gch;
             double x_abs, y_abs;
             int i, j, istart, iend;
-            var ann_font = get_font("annotation");
+            Font ann_font = get_font("annotation");
             var h_ann = ann_font.size;
             var line = parse.line;
 
             double get_float()
             {
-                var txt = "";
+                string txt = "";
 
                 while (true)
                 {
@@ -60,8 +63,8 @@ namespace autocad_part2
                 iend = parse.bol + line.index + 1;
             }
 
-            if (ann_font.pad != null)
-                h_ann += ann_font.pad.Value;
+            if (ann_font.pad != 0)
+                h_ann += ann_font.pad;
             i = 0;
             type = "g";
             while (true)
@@ -178,7 +181,7 @@ namespace autocad_part2
             }
         }
 
-        static string gch_tr1(string p, int tr)
+        string gch_tr1(string p, int tr)
         {
             int i, j, o, n, a, ip, b40, b40c;
             var csa = p.Split('/');
@@ -216,7 +219,10 @@ namespace autocad_part2
             return string.Join("/", csa);
         }
 
-        static void csan_add(Voice s)
+        // parser: add the parsed list of chord symbols and annotations
+        //	to the symbol (note, rest or bar)
+        //	and transpose the chord symbols
+        void csan_add(VoiceItem s)
         {
             int i;
             string gch;
@@ -250,11 +256,13 @@ namespace autocad_part2
             a_gch = null;
         }
 
-        static void gch_build(Voice s)
+        // generator: build the chord symbols / annotations
+        // (possible hook)
+        void gch_build(VoiceItem s)
         {
             string gch;
-            int wh, xspc, ix;
-            int y_left = 0, y_right = 0;
+            double wh, xspc, ix;
+            double y_left = 0, y_right = 0;
             const double GCHPRE = .4;
 
             for (ix = 0; ix < s.a_gch.Count; ix++)
@@ -324,7 +332,11 @@ namespace autocad_part2
             }
         }
 
-        static void draw_gchord(int i, Voice s, int x, int y)
+        // -- draw the chord symbols and annotations
+        // (the staves are not yet defined)
+        // (unscaled delayed output)
+        // (possible hook)
+        void draw_gchord(int i, VoiceItem s, double x, double y)
         {
             if (s.invis && s.play)
                 return;
@@ -362,9 +374,10 @@ namespace autocad_part2
             a_gch = null;
         }
 
-        static void draw_all_chsy()
+        // draw all chord symbols
+        void draw_all_chsy()
         {
-            Voice s;
+            VoiceItem s;
             string word, p, ly;
             int i, j, ly, dfnt, ln, c, cf;
 
@@ -516,12 +529,6 @@ namespace autocad_part2
             }
             curvoice.lyric_cont = s;
         }
-
-
-
-
-
-
 
 
     }

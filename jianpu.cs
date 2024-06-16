@@ -4,29 +4,47 @@ using System.Text;
 
 namespace autocad_part2
 {
-    public class Abc
+    partial  class Abc
     {
 
         public class Jianpu
         {
             public List<int> befAcc { get; set; }
             public List<string> k_tb { get; set; }
-            public List<int> abc2midiKey { get; set; }
-            public List<int> midi2jianpu { get; set; }
-            public List<object> midi2jianpuSharp { get; set; }
-            public List<object> midi2jianpuFlat { get; set; }
-            public List<int> cde2fcg { get; set; }
-            public List<int> cgd2cde { get; set; }
-            public List<int> acc2 { get; set; }
-            public List<string> acc_tb { get; set; }
-
-            public void CalcBeam(Func<object, object, object> of, object bm, object s1)
+            public int[] abc2midiKey = { 0, 2, 4, 5, 7, 9, 11 };
+            public int[] midi2jianpu = {-1, 6, 1, 8, 3, 10, 5,
+                            0,
+                            7, 2, 9, 4, 11, 6, 1 };
+            public (int num, int acc)[] midi2jianpuSharp =//升記號用
+                    { ( num: 1,acc:0 ), ( num: 1, acc: 1 ),
+                    ( num: 2,acc:0 ), ( num: 2, acc: 1 ),
+                    ( num: 3,acc:0 ),
+                    ( num: 4,acc:0 ), ( num: 4, acc: 1 ),
+                    ( num: 5,acc:0 ), ( num: 5, acc: 1 ),
+                    ( num: 6,acc:0 ), ( num: 6, acc: 1 ),
+                    ( num: 7,acc:0 )};
+            public (int num, int acc)[] midi2jianpuFlat =//降記號用
+                    {   (num: 1,acc:0 ), (num: 1, acc: -1 ),
+                        (num: 2,acc:0 ), (num: 2, acc: -1 ),
+                        (num: 3,acc:0 ),
+                        (num: 4,acc:0 ), (num: 4, acc: -1 ),
+                        (num: 5,acc:0 ), (num: 5, acc: -1 ),
+                        (num: 6,acc:0 ), (num: 6, acc: -1 ),
+                        (num: 7,acc:0 )};
+            public int[] cde2fcg = { 0, 2, 4, -1, 1, 3, 5 };
+            public int[] cgd2cde ={0, -4, -1, -5, -2, -6, -3,
+        0, -4, -1, -5, -2, -6, -3, 0};
+            public int[] acc2 = { -2, -1, 3, 1, 2 };
+            public string[] acc_tb = { "\ue264", "\ue260", , "\ue262", "\ue263", "\ue261" };
+            // don't calculate the beams
+            public void calc_beam(Func<object, object, object> of, object bm, object s1)
             {
                 if (!s1.p_v.jianpu)
                     return of(bm, s1);
             }
 
-            public void OutputMusic(Func<object> of)
+            // adjust some symbols before the generation
+            public void output_music(Func<object> of)
             {
                 var p_v = new object();
                 var v = new object();
@@ -330,7 +348,7 @@ namespace autocad_part2
                 of();
             }
 
-            public void DrawSymbols(Func<object, object> of, object p_voice)
+            public void draw_symbols(Func<object, object> of, object p_voice)
             {
                 var s = new object();
                 var s2 = new object();
@@ -396,7 +414,8 @@ namespace autocad_part2
                 }
             }
 
-            public void SetFmt(Func<object, object, object> of, object cmd, object param)
+            // set some parameters
+            public void set_fmt(Func<object, object, object> of, object cmd, object param)
             {
                 if (cmd == "jianpu")
                 {
@@ -406,7 +425,8 @@ namespace autocad_part2
                 of(cmd, param);
             }
 
-            public void SetPitch(Func<object, object> of, object last_s)
+            // adjust some values
+            public void set_pitch(Func<object, object> of, object last_s)
             {
                 of(last_s);
                 if (last_s == null)
@@ -436,36 +456,96 @@ namespace autocad_part2
                 }
             }
 
-            set_vp: function(of, a)
+            public void set_vp(System.Action<string[]> of, string[] a)
             {
-                var i, p_v = this.get_curvoice();
-                for (i = 0; i < a.length; i++)
+                int i;
+                var p_v = GetCurvoice();
+                for (i = 0; i < a.Length; i++)
                 {
                     if (a[i] == "jianpu=")
                     {
-                        p_v.jianpu = this.get_bool(a[++i]);
+                        p_v.jianpu = GetBool(a[++i]);
                         if (p_v.jianpu)
-                            this.set_vp([
-                                "staffsep=", "20",
-                                "sysstaffsep=", "14",
-                                "stafflines=", "...",
-                                "tuplets=", "0 1 0 1"
-                            // [auto, slur, Integer, above]
-                            ]);
-                break;
+                            SetVp(new string[]
+                            {
+                            "staffsep=", "20",
+                            "sysstaffsep=", "14",
+                            "stafflines=", "...",
+                            "tuplets=", "0 1 0 1"
+                            });
+                        break;
+                    }
+                }
+                of(a);
+            }
+
+            // set the width of some symbols
+            public static void set_width(System.Action<Abc2SvgSymbol> of, Abc2SvgSymbol s)
+            {
+                of(s);
+                if (s.p_v == null || !s.p_v.jianpu)
+                    return;
+                float w, m;
+                Abc2SvgNote note;
+                var C = Abc2Svg.C;
+                switch (s.type)
+                {
+                    case C.CLEF:
+                    case C.KEY:
+                        s.wl = s.wr = 0.1f; // (must not be null)
+                        break;
+                    case C.NOTE:
+                        for (m = 0; m <= s.nhd; m++)
+                        {
+                            note = s.notes[(int)m];
+                            if (note.acc && s.wl < 14) // room for the accidental
+                                s.wl = 14;
+                        }
+                        break;
+                }
+            }
+
+            public static void SetHooks(Abc2Svg abc)
+            {
+                abc.calculate_beam = Abc2Svg.Jianpu.CalcBeam(abc.calculate_beam);
+                abc.DrawSymbols = Abc2Svg.Jianpu.DrawSymbols(abc.DrawSymbols);
+                abc.OutputMusic = Abc2Svg.Jianpu.OutputMusic(abc.OutputMusic);
+                abc.SetFormat = Abc2Svg.Jianpu.SetFmt(abc.SetFormat);
+                abc.SetPitch = Abc2Svg.Jianpu.SetPitch(abc.SetPitch);
+                abc.SetVp = Abc2Svg.Jianpu.SetVp(abc.SetVp);
+                abc.SetWidth = Abc2Svg.Jianpu.SetWidth(abc.SetWidth);
+
+                // big staccato dot
+                abc.GetGlyphs().gstc = "<circle id=\"gstc\" cx=\"0\" cy=\"-3\" r=\"2\"/>";
+                abc.GetDecos().gstc = "0 gstc 5 1 1";
+                abc.AddStyle("\n.fj{font:15px sans-serif}");
+
+                if (abc.decos)
+                {    //新增加 字符號
+                    abc.decos['ustenuto'] = "0 emb 6 4 3"
+                    abc.decos['uswedge'] = "0 wedge 0 0 0"
+                    abc.decos['uswedge1'] = "0 wedge 1,10 -20 1"
+                    abc.decos['uswedge2'] = "0 wedge 10,20 -1 1"
+                    abc.decos['uswedge3'] = "0 wedge 20,1 -30 1"
+        
+            abc.decos['usslide1'] = "0 sld -1,10 -10 1"
+                    abc.decos['usslide2'] = "0 sld -10,20 -1 1"
+                    abc.decos['usslide3'] = "0 sld -20,30 -20 1"
+                    abc.decos['shake'] = "0 wedge -10,10 -10 1" //搖指
+            //第一個字符 func 說明
+            // 0:near the note(dot, tenuto)     音符附近（點、緩音）
+            // 1: special case for slide        幻燈片專用案例
+            // 2: special case for arpeggio     琶音的特殊情況
+            // 3, 4: (below the staff)          （五線譜下方）
+            // 5: (above the staff)             （五線譜上方）
+            // 6: tied to staff(dynamic marks)  綁法杖（動態標記）
+            // 7: (below the staff)             （五線譜下方）
+                }
             }
         }
-        of(a);
-    },
-
-        }
+    }
     }
 
 
 
-
-
-
-
-}
 

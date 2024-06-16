@@ -3,17 +3,36 @@ using System.Collections.Generic;
 using System.Text;
 
 
+// abc2svg - front.js - ABC parsing front-end
+//
+// Copyright (C) 2014-2023 Jean-Francois Moine
+//
+// This file is part of abc2svg-core.
+//
+// abc2svg-core is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// abc2svg-core is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with abc2svg-core.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace autocad_part2
 {
-    public class Abc
+    partial class Abc
     {
+        public SaveGlobalDefinitions sav = new SaveGlobalDefinitions(); // save global (between tunes) definitions
+        public Dictionary<string, string> mac = new Dictionary<string, string>(); // macros (m:)
+        public Dictionary<string, string> maci = new Dictionary<string, string>(); // first letters of macros
+        public Dictionary<string, string> modone = new Dictionary<string, string>(); // hooks done by module
 
-        public class SaveGlobalDefinitions
-        {
-        }
-
-        public static Dictionary<string, string> abc_utf = new Dictionary<string, string>()
+        // translation table from the ABC draft version 2.2
+        public  Dictionary<string, string> abc_utf = new Dictionary<string, string>()
         {
             {"=D", "Đ"},
             {"=H", "Ħ"},
@@ -23,6 +42,8 @@ namespace autocad_part2
             {"=t", "ŧ"},
             {"/O", "Ø"},
             {"/o", "ø"},
+    //	"/D": "Đ",
+    //	"/d": "đ",
             {"/L", "Ł"},
             {"/l", "ł"},
             {"vL", "Ľ"},
@@ -35,6 +56,7 @@ namespace autocad_part2
             {"ae", "æ"},
             {"DH", "Ð"},
             {"dh", "ð"},
+    //	"ng": "ŋ",
             {"OE", "Œ"},
             {"oe", "œ"},
             {"ss", "ß"},
@@ -42,7 +64,8 @@ namespace autocad_part2
             {"th", "þ"}
         };
 
-        public static Dictionary<string, string> oct_acc = new Dictionary<string, string>()
+        // accidentals as octal values (abcm2ps compatibility)
+        public  Dictionary<string, string> oct_acc = new Dictionary<string, string>()
         {
             {"1", "\u266f"},
             {"2", "\u266d"},
@@ -51,8 +74,10 @@ namespace autocad_part2
             {"5", "&#x1d12b;"}
         };
 
-        public static int include = 0;
+        // ABC include
+        public int include = 0;
 
+        // convert the escape sequences to utf-8
         public static string cnv_escape(string src, string flag = null)
         {
             string dst = "";
@@ -210,30 +235,8 @@ namespace autocad_part2
             include--;
         }
 
-        /*************************************/
-        public static Dictionary<string, string> sav = new Dictionary<string, string>(); // save global (between tunes) definitions
-        public static Dictionary<string, string> mac = new Dictionary<string, string>(); // macros (m:)
-        public static Dictionary<string, string> maci = new Dictionary<string, string>(); // first letters of macros
-        public static Dictionary<string, string> modone = new Dictionary<string, string>(); // hooks done by module
-
-        // translation table from the ABC draft version 2.2
-        public static Dictionary<string, string> abc_utf = new Dictionary<string, string>()
-    {
-        { "=D", "Đ" },
-        { "=H", "Ħ" }
-    };
-
-        // accidentals as octal values (abcm2ps compatibility)
-        public static Dictionary<string, string> oct_acc = new Dictionary<string, string>()
-    {
-        { "1", "\u266f" },
-        { "2", "\u266d" },
-        { "3", "\u266e" },
-        { "4", "&#x1d12a;" },
-        { "5", "&#x1d12b;" }
-    };
-
-        public static void tosvg(string in_fname, string file, int? bol = null, int? eof = null)
+        // parse ABC code
+        public void tosvg(string in_fname, string file, int bol = 0, int eof = 0)
         {
             int i, c, eol, end;
             string select, line0, line1, last_info, opt, text, a, b, s, pscom, txt_add = "\n";
@@ -241,7 +244,7 @@ namespace autocad_part2
             // check if a tune is selected
             bool tune_selected()
             {
-                int re, res, i = file.IndexOf("K:", bol.Value);
+                int re, res, i = file.IndexOf("K:", bol);
 
                 if (i < 0)
                 {
@@ -256,7 +259,7 @@ namespace autocad_part2
                 if (res > 0)
                     eol = re;
                 else
-                    eol = eof.Value;
+                    eol = eof;
                 return false;
             }
 
@@ -790,16 +793,6 @@ namespace autocad_part2
             parse.state = 0;
         }
     }
-
-
-
-
-
-
-
-
-
-
 
 
 

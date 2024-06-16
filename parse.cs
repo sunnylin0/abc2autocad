@@ -27,20 +27,22 @@ namespace autocad_part2
 {
 
 
-    var a_gch = new List<object>();     // array of parsed guitar chords
-    var a_dcn = new List<object>();     // array of parsed decoration names
-    object multicol;        // multi column object
-    var maps = new Dictionary<object, object>();        // maps object - see set_map()
-    var qplet_tb = new sbyte[] { 0, 1, 3, 2, 3, 0, 2, 0, 3, 0 };
-    var ntb = "CDEFGABcdefgab";
-
-    // parse a duration and return [numerator, denominator]
-    // 'line' is not always 'parse.line'
-    var reg_dur = new System.Text.RegularExpressions.Regex(@" (\d*)(\/*)(\d*)");        /* (stop comment) */
-
-    var nil = "0";
-    var char_tb = new string[]
+    partial class Abc
     {
+        var a_gch = new List<object>();     // array of parsed guitar chords
+        List<string> a_dcn = new List<string>();     // array of parsed decoration names
+        object multicol;        // multi column object
+        var maps = new Dictionary<object, object>();        // maps object - see set_map()
+        int[] qplet_tb = new int[] { 0, 1, 3, 2, 3, 0, 2, 0, 3, 0 };
+        string ntb = "CDEFGABcdefgab";
+
+        // parse a duration and return [numerator, denominator]
+        // 'line' is not always 'parse.line'
+        var reg_dur = new System.Text.RegularExpressions.Regex(@" (\d*)(\/*)(\d*)");        /* (stop comment) */
+
+        static string nil = "0";
+        string[] char_tb = new string[]
+        {
                 nil, nil, nil, nil,		/* 00 - .. */
                 nil, nil, nil, nil,
                 nil, " ", "\n", nil,		/* . \t \n . */
@@ -76,980 +78,950 @@ namespace autocad_part2
                 "!downbow!", "d",	/* t u v w */
                 "n", "n", "n", "{",		/* x y z { */
                 "|", "}", "!gmark!", nil,   /* | } ~ (del) */
-    }; // char_tb[]
+        }; // char_tb[]
 
-    void set_ref(object s)
-    {
-        s.fname = parse.fname;
-        s.istart = parse.istart;
-        s.iend = parse.iend;
-    }
-
-    object new_clef(string clef_def)
-    {
-        var s = new Dictionary<string, object>
-                {
-                    { "type", C.CLEF },
-                    { "clef_line", 2 },
-                    { "clef_type", "t" },
-                    { "v", curvoice.v },
-                    { "p_v", curvoice },
-                    { "time", curvoice.time },
-                    { "dur", 0 }
-                };
-        var i = 1;
-
-        set_ref(s);
-
-        switch (clef_def[0])
+        // set the source references of a symbol
+        void set_ref(VoiceItem s)
         {
-            case '"':
-                i = clef_def.IndexOf('"', 1);
-                s["clef_name"] = clef_def.Substring(1, i - 1);
-                i++;
-                break;
-            case 'a':
-                if (clef_def[1] == 'u')    // auto
-                {
-                    s["clef_type"] = "a";
-                    s["clef_auto"] = true;
-                    i = 4;
+            s.fname = parse.fname;
+            s.istart = parse.istart;
+            s.iend = parse.iend;
+        }
+
+        // -- %% pseudo-comment
+
+        // clef definition (%%clef, K: and V:)
+        VoiceItem new_clef(string clef_def)
+        {
+            VoiceItem s = new VoiceItem
+            {
+                    type= C.CLEF ,
+                    clef_line= 2 ,
+                    clef_type= "t" ,
+                    v= curvoice.v ,
+                    p_v= curvoice ,
+                    time= curvoice.time ,
+                    dur= 0 
+                };
+            var i = 1;
+
+            set_ref(s);
+
+            switch (clef_def[0])
+            {
+                case '"':
+                    i = clef_def.IndexOf('"', 1);
+                    s["clef_name"] = clef_def.Substring(1, i - 1);
+                    i++;
                     break;
-                }
-                i = 4;                // alto
-                goto case 'C';
-            case 'C':
-                s["clef_type"] = "c";
-                s["clef_line"] = 3;
-                break;
-            case 'b':                // bass
-                i = 4;
-                goto case 'F';
-            case 'F':
-                s["clef_type"] = "b";
-                s["clef_line"] = 4;
-                break;
-            case 'n':                // none
-                i = 4;
-                s["invis"] = true;
-                s["clef_none"] = true; //true
-                break;
-            case 't':
-                if (clef_def[1] == 'e')    // tenor
-                {
+                case 'a':
+                    if (clef_def[1] == 'u')    // auto
+                    {
+                        s["clef_type"] = "a";
+                        s["clef_auto"] = true;
+                        i = 4;
+                        break;
+                    }
+                    i = 4;                // alto
+                    goto case 'C';
+                case 'C':
                     s["clef_type"] = "c";
+                    s["clef_line"] = 3;
+                    break;
+                case 'b':                // bass
+                    i = 4;
+                    goto case 'F';
+                case 'F':
+                    s["clef_type"] = "b";
                     s["clef_line"] = 4;
                     break;
-                }
-                i = 6;
-                goto case 'G';
-            case 'G':
-                //        s.clef_type = "t"        // treble
-                break;
-            case 'p':
-                i = 4;
-                goto case 'P';                // perc
-            case 'P':
-                s["clef_type"] = "p";
-                s["clef_line"] = 3;
-                break;
-            default:
-                syntax(1, "Unknown clef '$1'", clef_def);
-                return null;
-        }
-        if (clef_def[i] >= '1' && clef_def[i] <= '9')
-        {
-            s["clef_line"] = int.Parse(clef_def[i].ToString());
-            i++;
-        }
+                case 'n':                // none
+                    i = 4;
+                    s["invis"] = true;
+                    s["clef_none"] = true; //true
+                    break;
+                case 't':
+                    if (clef_def[1] == 'e')    // tenor
+                    {
+                        s["clef_type"] = "c";
+                        s["clef_line"] = 4;
+                        break;
+                    }
+                    i = 6;
+                    goto case 'G';
+                case 'G':
+                    //        s.clef_type = "t"        // treble
+                    break;
+                case 'p':
+                    i = 4;
+                    goto case 'P';                // perc
+                case 'P':
+                    s["clef_type"] = "p";
+                    s["clef_line"] = 3;
+                    break;
+                default:
+                    syntax(1, "Unknown clef '$1'", clef_def);
+                    return null;
+            }
+            if (clef_def[i] >= '1' && clef_def[i] <= '9')
+            {
+                s["clef_line"] = int.Parse(clef_def[i].ToString());
+                i++;
+            }
 
-        // handle the octave (+/-8 - ^/_8)
-        curvoice.snd_oct = null;
-        if (clef_def[i + 1] != '8'
-            && clef_def[i + 1] != '1')
+            // handle the octave (+/-8 - ^/_8)
+            curvoice.snd_oct = null;
+            if (clef_def[i + 1] != '8'
+                && clef_def[i + 1] != '1')
+                return s;
+            switch (clef_def[i])            // octave
+            {
+                case '^':
+                    s["clef_oct_transp"] = true;
+                    goto case '+';
+                case '+':
+                    s["clef_octave"] = clef_def[i + 1] == '8' ? 7 : 14;
+                    if (!(bool)s["clef_oct_transp"])        // MIDI higher octave
+                        curvoice.snd_oct = clef_def[i + 1] == '8' ? 12 : 24;
+                    break;
+                case '_':
+                    s["clef_oct_transp"] = true;
+                    goto case '-';
+                case '-':
+                    s["clef_octave"] = clef_def[i + 1] == '8' ? -7 : -14;
+                    if (!(bool)s["clef_oct_transp"])        // MIDI lower octave
+                        curvoice.snd_oct = clef_def[i + 1] == '8' ? -12 : -24;
+                    break;
+            }
             return s;
-        switch (clef_def[i])            // octave
+        }
+
+        // convert an interval to a base-40 interval
+        object get_interval(object param, object score = null)
         {
-            case '^':
-                s["clef_oct_transp"] = true;
-                goto case '+';
-            case '+':
-                s["clef_octave"] = clef_def[i + 1] == '8' ? 7 : 14;
-                if (!(bool)s["clef_oct_transp"])        // MIDI higher octave
-                    curvoice.snd_oct = clef_def[i + 1] == '8' ? 12 : 24;
-                break;
-            case '_':
-                s["clef_oct_transp"] = true;
-                goto case '-';
-            case '-':
-                s["clef_octave"] = clef_def[i + 1] == '8' ? -7 : -14;
-                if (!(bool)s["clef_oct_transp"])        // MIDI lower octave
-                    curvoice.snd_oct = clef_def[i + 1] == '8' ? -12 : -24;
-                break;
-        }
-        return s;
-    }
-    object get_interval(object param, object score = null)
-    {
-        int i;
-        object val, tmp, note, pit;
+            int i;
+            object val, tmp, note, pit;
 
-        tmp = new scanBuf();
-        tmp.buffer = param;
-        pit = new object[2];
-        for (i = 0; i < 2; i++)
-        {
-            note = tmp.buffer[tmp.index] != null ? parse_acc_pit(tmp) : null;
-            if (note == null)
+            tmp = new scanBuf();
+            tmp.buffer = param;
+            pit = new object[2];
+            for (i = 0; i < 2; i++)
             {
-                if (i != 1 || score == null)
+                note = tmp.buffer[tmp.index] != null ? parse_acc_pit(tmp) : null;
+                if (note == null)
                 {
-                    syntax(1, errs.bad_transp);
-                    return null;
+                    if (i != 1 || score == null)
+                    {
+                        syntax(1, errs.bad_transp);
+                        return null;
+                    }
+                    pit[i] = 242;            // 'c' (C5)
                 }
-                pit[i] = 242;            // 'c' (C5)
-            }
-            else
-            {
-                if (note.acc.GetType() == typeof(object[]))
+                else
                 {
-                    syntax(1, errs.bad_transp);
-                    return null;
+                    if (note.acc.GetType() == typeof(object[]))
+                    {
+                        syntax(1, errs.bad_transp);
+                        return null;
+                    }
+                    pit[i] = abc2svg.pab40(note.pit, note.acc);
                 }
-                pit[i] = abc2svg.pab40(note.pit, note.acc);
             }
-        }
-        return pit[1] - pit[0];
-    }
-    object nt_trans(object nt,
-        object a)
-    {            // real accidental
-        int ak, an, d, b40, n;
-
-        if (a.GetType() == typeof(object[]))
-        {        // if microtonal accidental
-            n = (int)a[0];            // numerator
-            d = (int)a[1];            // denominator
-            a = n > 0 ? 1 : -1;        // base accidental for transpose
+            return pit[1] - pit[0];
         }
 
-        b40 = abc2svg.pab40(nt.pit, (int)a)
-            + curvoice.tr_sco;        // base-40 transposition
+        // transpose a note for the score
+        // Return the transposed real accidental
+        object nt_trans(object nt,
+            object a)
+        {            // real accidental
+            int ak, an, d, b40, n;
 
-        nt.pit = abc2svg.b40p(b40);        // new pitch
-        an = abc2svg.b40a(b40);            // new accidental
+            if (a.GetType() == typeof(object[]))
+            {        // if microtonal accidental
+                n = (int)a[0];            // numerator
+                d = (int)a[1];            // denominator
+                a = n > 0 ? 1 : -1;        // base accidental for transpose
+            }
 
-        if (d == 0)
-        {                // if not a microtonal accidental
-            if (an == -3)            // if triple sharp/flat
+            b40 = abc2svg.pab40(nt.pit, (int)a)
+                + curvoice.tr_sco;        // base-40 transposition
+
+            nt.pit = abc2svg.b40p(b40);        // new pitch
+            an = abc2svg.b40a(b40);            // new accidental
+
+            if (d == 0)
+            {                // if not a microtonal accidental
+                if (an == -3)            // if triple sharp/flat
+                    return an;
+                a = an;
+                if (nt.acc != null)
+                {            // if old accidental
+                    if (a == null)
+                        a = 3;        // required natural
+                }
+                else
+                {
+                    if (!curvoice.ckey.k_none) // if normal key
+                        a = 0;        // no accidental
+                }
+                nt.acc = a;
                 return an;
-            a = an;
-            if (nt.acc != null)
-            {            // if old accidental
-                if (a == null)
-                    a = 3;        // required natural
             }
-            else
+
+            // set the microtonal accidental after transposition
+            switch (an)
             {
-                if (!curvoice.ckey.k_none) // if normal key
-                    a = 0;        // no accidental
+                case -2:
+                    if (n > 0)
+                        n -= d * 2;
+                    else
+                        n -= d;
+                    break;
+                case -1:
+                    if (n > 0)
+                        n -= d;
+                    break;
+                case 0:
+                case 3:
+                    if (n > 0)
+                        n -= d;
+                    else
+                        n += d;
+                    break;
+                case 1:
+                    if (n < 0)
+                        n += d;
+                    break;
+                case 2:
+                    if (n < 0)
+                        n += d * 2;
+                    else
+                        n += d;
+                    break;
             }
-            nt.acc = a;
+            nt.acc = new object[] { n, d };
             return an;
         }
 
-        // set the microtonal accidental after transposition
-        switch (an)
+        // set the linebreak character
+        void set_linebreak(object param)
         {
-            case -2:
-                if (n > 0)
-                    n -= d * 2;
-                else
-                    n -= d;
-                break;
-            case -1:
-                if (n > 0)
-                    n -= d;
-                break;
-            case 0:
-            case 3:
-                if (n > 0)
-                    n -= d;
-                else
-                    n += d;
-                break;
-            case 1:
-                if (n < 0)
-                    n += d;
-                break;
-            case 2:
-                if (n < 0)
-                    n += d * 2;
-                else
-                    n += d;
-                break;
-        }
-        nt.acc = new object[] { n, d };
-        return an;
-    }
-    void set_linebreak(object param)
-    {
-        int i;
-        object item;
+            int i;
+            object item;
 
-        for (i = 0; i < 128; i++)
-        {
-            if (char_tb[i] == "\n")
-                char_tb[i] = nil;    // remove old definition
-        }
-        param = param.ToString();
-        var paramArr = param.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-        for (i = 0; i < paramArr.Length; i++)
-        {
-            item = paramArr[i];
-            switch (item.ToString())
+            for (i = 0; i < 128; i++)
             {
-                case "!":
-                case "$":
-                case "*":
-                case ";":
-                case "?":
-                case "@":
-                    break;
-                case "<none>":
-                    continue;
-                case "<EOL>":
-                    item = '\n';
-                    break;
-                default:
-                    syntax(1, "Bad value '$1' in %%linebreak - ignored",
-                        item);
-                    continue;
+                if (char_tb[i] == "\n")
+                    char_tb[i] = nil;    // remove old definition
             }
-            char_tb[(int)item.ToString()[0]] = '\n';
-        }
-    }
-    void set_user(object parm)
-    {
-        int k;
-        char c;
-        object v;
-        var a = System.Text.RegularExpressions.Regex.Match(parm.ToString(), @"(.)[=\s]*(\[I:.+\]|"".+""|!.+!)");
-
-        if (!a.Success)
-        {
-            syntax(1, 'Lack of starting [, ! or " in U: / %%user');
-            return;
-        }
-        c = a.Groups[1].Value[0];
-        v = a.Groups[2].Value;
-        if (c == '\\')
-        {
-            if (c == 't')
-                c = '\t';
-            else if (c == null)
-                c = ' ';
-        }
-
-        k = (int)c;
-        if (k >= 128)
-        {
-            syntax(1, errs.not_ascii);
-            return;
-        }
-        switch (char_tb[k][0])
-        {
-            case '0':            // nil
-            case 'd':
-            case 'i':
-            case ' ':
-                break;
-            case '"':
-            case '!':
-            case '[':
-                if (char_tb[k].Length > 1)
-                    break;
-            // fall thru
-            default:
-                syntax(1, "Bad user character '$1'", c);
-                return;
-        }
-        switch (v.ToString())
-        {
-            case "!beambreak!":
-                v = " ";
-                break;
-            case "!ignore!":
-                v = "i";
-                break;
-            case "!nil!":
-            case "!none!":
-                v = "d";
-                break;
-        }
-        char_tb[k] = v.ToString();
-    }
-    object get_st_lines(object param)
-    {
-        if (param == null)
-            return null;
-        if (System.Text.RegularExpressions.Regex.IsMatch(param.ToString(), @"^[\]\[|.-]+$"))
-            return System.Text.RegularExpressions.Regex.Replace(param.ToString(), @"\]", "[");
-
-        var n = int.Parse(param.ToString());
-        switch (n)
-        {
-            case 0: return "...";
-            case 1: return "..|";
-            case 2: return ".||";
-            case 3: return ".|||";
-        }
-        if (int.TryParse(param.ToString(), out n) || n < 0 || n > 16)
-            return null;
-        return "||||||||||||||||".Substring(0, n);
-    }
-    object new_block(object subtype)
-    {
-        object c_v;
-        var s = new Dictionary<string, object>
+            param = param.ToString();
+            var paramArr = param.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            for (i = 0; i < paramArr.Length; i++)
+            {
+                item = paramArr[i];
+                switch (item.ToString())
                 {
-                    { "type", C.BLOCK },
-                    { "subtype", subtype },
-                    { "dur", 0 }
+                    case "!":
+                    case "$":
+                    case "*":
+                    case ";":
+                    case "?":
+                    case "@":
+                        break;
+                    case "<none>":
+                        continue;
+                    case "<EOL>":
+                        item = '\n';
+                        break;
+                    default:
+                        syntax(1, "Bad value '$1' in %%linebreak - ignored",
+                            item);
+                        continue;
+                }
+                char_tb[(int)item.ToString()[0]] = '\n';
+            }
+        }
+
+        // set a new user character (U: or %%user)
+        void set_user(object parm)
+        {
+            int k;
+            char c;
+            object v;
+            var a = System.Text.RegularExpressions.Regex.Match(parm.ToString(), @"(.)[=\s]*(\[I:.+\]|"".+""|!.+!)");
+
+            if (!a.Success)
+            {
+                syntax(1, 'Lack of starting [, ! or " in U: / %%user');
+                return;
+            }
+            c = a.Groups[1].Value[0];
+            v = a.Groups[2].Value;
+            if (c == '\\')
+            {
+                if (c == 't')
+                    c = '\t';
+                else if (c == null)
+                    c = ' ';
+            }
+
+            k = (int)c;
+            if (k >= 128)
+            {
+                syntax(1, errs.not_ascii);
+                return;
+            }
+            switch (char_tb[k][0])
+            {
+                case '0':            // nil
+                case 'd':
+                case 'i':
+                case ' ':
+                    break;
+                case '"':
+                case '!':
+                case '[':
+                    if (char_tb[k].Length > 1)
+                        break;
+                // fall thru
+                default:
+                    syntax(1, "Bad user character '$1'", c);
+                    return;
+            }
+            switch (v.ToString())
+            {
+                case "!beambreak!":
+                    v = " ";
+                    break;
+                case "!ignore!":
+                    v = "i";
+                    break;
+                case "!nil!":
+                case "!none!":
+                    v = "d";
+                    break;
+            }
+            char_tb[k] = v.ToString();
+        }
+
+        // get a stafflines value
+        string get_st_lines(object param)
+        {
+            if (param == null)
+                return null;
+            if (System.Text.RegularExpressions.Regex.IsMatch(param.ToString(), @"^[\]\[|.-]+$"))
+                return System.Text.RegularExpressions.Regex.Replace(param.ToString(), @"\]", "[");
+
+            var n = int.Parse(param.ToString());
+            switch (n)
+            {
+                case 0: return "...";
+                case 1: return "..|";
+                case 2: return ".||";
+                case 3: return ".|||";
+            }
+            if (int.TryParse(param.ToString(), out n) || n < 0 || n > 16)
+                return null;
+            return "||||||||||||||||".Substring(0, n);
+        }
+
+        // create a block symbol in the tune body
+        VoiceItem new_block(string subtype)
+        {
+            PageVoiceTune c_v;
+            VoiceItem s = new VoiceItem
+                {
+                    type= C.BLOCK ,
+                    subtype= subtype ,
+                    dur= 0 
                 };
 
-        c_v = curvoice;
-        if (subtype.ToString().Substring(0, 4) != "midi")    // if not a play command
-            curvoice = voice_tb[0];    // set the block in the first voice
-        sym_link(s);
-        if (c_v != null)
-            curvoice = c_v;
-        return s;
-    }
+            c_v = curvoice;
+            if (subtype.ToString().Substring(0, 4) != "midi")    // if not a play command
+                curvoice = voice_tb[0];    // set the block in the first voice
+            sym_link(s);
+            if (c_v != null)
+                curvoice = c_v;
+            return s;
+        }
 
-    void set_vp(List<object> a)
-    {
-        object s, item, pos, val, clefpit;
-        int tr_p = 0;
-
-        while (true)
+        // set the voice parameters
+        // (possible hook)
+        void set_vp(List<object> a)
         {
-            item = a[0];
-            a.RemoveAt(0);
-            if (item == null)
-                break;
-            if (item.ToString().Substring(item.ToString().Length - 1) == "=" && a.Count == 0)
+            VoiceItem s;
+            string item;
+               int pos, val, clefpit;
+            int tr_p = 0;
+
+            while (true)
             {
-                syntax(1, errs.bad_val, item);
-                break;
-            }
-            switch (item.ToString())
-            {
-                case "clef=":
-                    s = a[0];
-                    a.RemoveAt(0);
+                item = a[0];
+                a.RemoveAt(0);
+                if (item == null)
                     break;
-                case "clefpitch=":
-                    item = a[0];
-                    a.RemoveAt(0);
-                    if (item != null)
-                    {
-                        val = ntb.IndexOf(item.ToString()[0]);
-                        if (val >= 0)
-                        {
-                            switch (item.ToString()[1])
-                            {
-                                case "'":
-                                    val += 7;
-                                    break;
-                                case ',':
-                                    val -= 7;
-                                    if (item.ToString()[2] == ',')
-                                        val -= 7;
-                                    break;
-                            }
-                            clefpit = 4 - val;
-                            break;
-                        }
-                    }
+                if (item.ToString().Substring(item.ToString().Length - 1) == "=" && a.Count == 0)
+                {
                     syntax(1, errs.bad_val, item);
                     break;
-                case "octave=":
-                    val = Convert.ToInt32(a[0]);
-                    a.RemoveAt(0);
-                    if (double.IsNaN(val))
+                }
+                switch (item.ToString())
+                {
+                    case "clef=":
+                        s = a[0];
+                        a.RemoveAt(0);
+                        break;
+                    case "clefpitch=":
+                        item = a[0];
+                        a.RemoveAt(0);
+                        if (item != null)
+                        {
+                            val = ntb.IndexOf(item.ToString()[0]);
+                            if (val >= 0)
+                            {
+                                switch (item.ToString()[1])
+                                {
+                                    case "'":
+                                        val += 7;
+                                        break;
+                                    case ',':
+                                        val -= 7;
+                                        if (item.ToString()[2] == ',')
+                                            val -= 7;
+                                        break;
+                                }
+                                clefpit = 4 - val;
+                                break;
+                            }
+                        }
                         syntax(1, errs.bad_val, item);
-                    else
-                        curvoice.octave = val;
-                    break;
-                case "cue=":
-                    curvoice.scale = a[0].ToString() == "on" ? 0.7 : 1;
-                    a.RemoveAt(0);
-                    break;
-                case "instrument=":
-                    item = a[0];
-                    a.RemoveAt(0);
-                    val = item.ToString().IndexOf('/');
-                    if (val < 0)
-                    {
-                        val = get_interval('c' + item.ToString());
-                        if (val == null)
-                            break;
-                        curvoice.sound = val;
-                        tr_p |= 2;
-                        val = 0;
-                    }
-                    else
-                    {
-                        val = get_interval('c' + item.ToString().Substring(val + 1));
-                        if (val == null)
-                            break;
-                        curvoice.sound = val;
-                        tr_p |= 2;
-                        val = get_interval(item.ToString().Replace('/', ''));
-                        if (val == null)
-                            break;
-                    }
-                    curvoice.score = cfmt.sound ? curvoice.sound : val;
-                    tr_p |= 1;
-                    break;
-                case "map=":
-                    curvoice.map = a[0];
-                    a.RemoveAt(0);
-                    break;
-                case "name=":
-                case "nm=":
-                    curvoice.nm = a[0];
-                    if (curvoice.nm.ToString()[0] == '"')
-                        curvoice.nm = cnv_escape(curvoice.nm.ToString().Substring(1, curvoice.nm.ToString().Length - 2));
-                    curvoice.new_name = true;
-                    a.RemoveAt(0);
-                    break;
-                case "stem=":
-                case "pos=":
-                    if (item.ToString() == "pos=")
-                        item = a[0].ToString().Substring(1, a[0].ToString().Length - 2).Split(' ');
-                    else
-                        item = new object[] { "stm", a[0] };
-                    val = posval[item.ToString()[1]];
-                    if (val == null)
-                    {
-                        syntax(1, errs.bad_val, "%%pos");
                         break;
-                    }
-                    switch (item.ToString()[2])
-                    {
-                        case "align":
-                            val |= C.SL_ALIGN;
-                            break;
-                        case "center":
-                            val |= C.SL_CENTER;
-                            break;
-                        case "close":
-                            val |= C.SL_CLOSE;
-                            break;
-                    }
-                    if (pos == null)
-                        pos = new Dictionary<object, object>();
-                    pos[item.ToString()[0]] = val;
-                    break;
-                case "scale=":
-                    val = Convert.ToDouble(a[0]);
-                    a.RemoveAt(0);
-                    if (double.IsNaN(val) || val < 0.5 || val > 2)
-                        syntax(1, errs.bad_val, "%%voicescale");
-                    else
-                        curvoice.scale = val;
-                    break;
-                case "score=":
-                    if (cfmt.nedo)
-                    {
-                        syntax(1, errs.notransp);
+                    case "octave=":
+                        val = Convert.ToInt32(a[0]);
+                        a.RemoveAt(0);
+                        if (double.IsNaN(val))
+                            syntax(1, errs.bad_val, item);
+                        else
+                            curvoice.octave = val;
                         break;
-                    }
-                    item = a[0];
-                    if (cfmt.sound)
+                    case "cue=":
+                        curvoice.scale = a[0].ToString() == "on" ? 0.7 : 1;
+                        a.RemoveAt(0);
                         break;
-                    val = get_interval(item.ToString(), true);
-                    if (val != null)
-                    {
-                        curvoice.score = val;
+                    case "instrument=":
+                        item = a[0];
+                        a.RemoveAt(0);
+                        val = item.ToString().IndexOf('/');
+                        if (val < 0)
+                        {
+                            val = get_interval('c' + item.ToString());
+                            if (val == null)
+                                break;
+                            curvoice.sound = val;
+                            tr_p |= 2;
+                            val = 0;
+                        }
+                        else
+                        {
+                            val = get_interval('c' + item.ToString().Substring(val + 1));
+                            if (val == null)
+                                break;
+                            curvoice.sound = val;
+                            tr_p |= 2;
+                            val = get_interval(item.ToString().Replace('/', ''));
+                            if (val == null)
+                                break;
+                        }
+                        curvoice.score = cfmt.sound ? curvoice.sound : val;
                         tr_p |= 1;
-                    }
-                    break;
-                case "shift=":
-                    if (cfmt.nedo)
-                    {
-                        syntax(1, errs.notransp);
                         break;
-                    }
-                    val = get_interval(a[0].ToString());
-                    if (val != null)
-                    {
-                        curvoice.shift = val;
-                        tr_p = 3;
-                    }
-                    break;
-                case "sound=":
-                    if (cfmt.nedo)
-                    {
-                        syntax(1, errs.notransp);
+                    case "map=":
+                        curvoice.map = a[0];
+                        a.RemoveAt(0);
                         break;
-                    }
-                    val = get_interval(a[0].ToString());
-                    if (val == null)
+                    case "name=":
+                    case "nm=":
+                        curvoice.nm = a[0];
+                        if (curvoice.nm.ToString()[0] == '"')
+                            curvoice.nm = cnv_escape(curvoice.nm.ToString().Substring(1, curvoice.nm.ToString().Length - 2));
+                        curvoice.new_name = true;
+                        a.RemoveAt(0);
                         break;
-                    curvoice.sound = val;
-                    if (cfmt.sound)
-                        curvoice.score = val;
-                    tr_p |= 2;
-                    break;
-                case "subname=":
-                case "sname=":
-                case "snm=":
-                    curvoice.snm = a[0];
-                    if (curvoice.snm.ToString()[0] == '"')
-                        curvoice.snm = curvoice.snm.ToString().Substring(1, curvoice.snm.ToString().Length - 2);
-                    a.RemoveAt(0);
-                    break;
-                case "stafflines=":
-                    val = get_st_lines(a[0]);
-                    if (val == null)
-                        syntax(1, "Bad %%stafflines value");
-                    else if (curvoice.st != null)
-                        par_sy.staves[curvoice.st].stafflines = val;
-                    else
-                        curvoice.stafflines = val;
-                    a.RemoveAt(0);
-                    break;
-                case "staffnonote=":
-                    val = Convert.ToInt32(a[0]);
-                    if (double.IsNaN(val))
-                        syntax(1, "Bad %%staffnonote value");
-                    else
-                        curvoice.staffnonote = val;
-                    a.RemoveAt(0);
-                    break;
-                case "staffscale=":
-                    val = Convert.ToDouble(a[0]);
-                    if (double.IsNaN(val) || val < 0.3 || val > 2)
-                        syntax(1, "Bad %%staffscale value");
-                    else
-                        curvoice.staffscale = val;
-                    a.RemoveAt(0);
-                    break;
-                case "tacet=":
-                    val = a[0];
-                    curvoice.tacet = val != null ? val.ToString() : null;
-                    a.RemoveAt(0);
-                    break;
-                case "transpose=":
-                    if (cfmt.nedo)
-                    {
-                        syntax(1, errs.notransp);
+                    case "stem=":
+                    case "pos=":
+                        if (item.ToString() == "pos=")
+                            item = a[0].ToString().Substring(1, a[0].ToString().Length - 2).Split(' ');
+                        else
+                            item = new object[] { "stm", a[0] };
+                        val = posval[item.ToString()[1]];
+                        if (val == null)
+                        {
+                            syntax(1, errs.bad_val, "%%pos");
+                            break;
+                        }
+                        switch (item.ToString()[2])
+                        {
+                            case "align":
+                                val |= C.SL_ALIGN;
+                                break;
+                            case "center":
+                                val |= C.SL_CENTER;
+                                break;
+                            case "close":
+                                val |= C.SL_CLOSE;
+                                break;
+                        }
+                        if (pos == null)
+                            pos = new Dictionary<object, object>();
+                        pos[item.ToString()[0]] = val;
                         break;
-                    }
-                    val = get_transp(a[0].ToString());
-                    if (val == null)
-                    {
-                        syntax(1, errs.bad_transp);
-                    }
-                    else
-                    {
+                    case "scale=":
+                        val = Convert.ToDouble(a[0]);
+                        a.RemoveAt(0);
+                        if (double.IsNaN(val) || val < 0.5 || val > 2)
+                            syntax(1, errs.bad_val, "%%voicescale");
+                        else
+                            curvoice.scale = val;
+                        break;
+                    case "score=":
+                        if (cfmt.nedo)
+                        {
+                            syntax(1, errs.notransp);
+                            break;
+                        }
+                        item = a[0];
+                        if (cfmt.sound)
+                            break;
+                        val = get_interval(item.ToString(), true);
+                        if (val != null)
+                        {
+                            curvoice.score = val;
+                            tr_p |= 1;
+                        }
+                        break;
+                    case "shift=":
+                        if (cfmt.nedo)
+                        {
+                            syntax(1, errs.notransp);
+                            break;
+                        }
+                        val = get_interval(a[0].ToString());
+                        if (val != null)
+                        {
+                            curvoice.shift = val;
+                            tr_p = 3;
+                        }
+                        break;
+                    case "sound=":
+                        if (cfmt.nedo)
+                        {
+                            syntax(1, errs.notransp);
+                            break;
+                        }
+                        val = get_interval(a[0].ToString());
+                        if (val == null)
+                            break;
                         curvoice.sound = val;
                         if (cfmt.sound)
                             curvoice.score = val;
-                        tr_p = 2;
-                    }
-                    break;
-                default:
-                    switch (item.ToString().Substring(0, 4))
-                    {
-                        case "treb":
-                        case "bass":
-                        case "alto":
-                        case "teno":
-                        case "perc":
-                            s = item;
+                        tr_p |= 2;
+                        break;
+                    case "subname=":
+                    case "sname=":
+                    case "snm=":
+                        curvoice.snm = a[0];
+                        if (curvoice.snm.ToString()[0] == '"')
+                            curvoice.snm = curvoice.snm.ToString().Substring(1, curvoice.snm.ToString().Length - 2);
+                        a.RemoveAt(0);
+                        break;
+                    case "stafflines=":
+                        val = get_st_lines(a[0]);
+                        if (val == null)
+                            syntax(1, "Bad %%stafflines value");
+                        else if (curvoice.st != null)
+                            par_sy.staves[curvoice.st].stafflines = val;
+                        else
+                            curvoice.stafflines = val;
+                        a.RemoveAt(0);
+                        break;
+                    case "staffnonote=":
+                        val = Convert.ToInt32(a[0]);
+                        if (double.IsNaN(val))
+                            syntax(1, "Bad %%staffnonote value");
+                        else
+                            curvoice.staffnonote = val;
+                        a.RemoveAt(0);
+                        break;
+                    case "staffscale=":
+                        val = Convert.ToDouble(a[0]);
+                        if (double.IsNaN(val) || val < 0.3 || val > 2)
+                            syntax(1, "Bad %%staffscale value");
+                        else
+                            curvoice.staffscale = val;
+                        a.RemoveAt(0);
+                        break;
+                    case "tacet=":
+                        val = a[0];
+                        curvoice.tacet = val != null ? val.ToString() : null;
+                        a.RemoveAt(0);
+                        break;
+                    case "transpose=":
+                        if (cfmt.nedo)
+                        {
+                            syntax(1, errs.notransp);
                             break;
-                        default:
-                            if ("GFC".IndexOf(item.ToString()[0]) >= 0)
+                        }
+                        val = get_transp(a[0].ToString());
+                        if (val == null)
+                        {
+                            syntax(1, errs.bad_transp);
+                        }
+                        else
+                        {
+                            curvoice.sound = val;
+                            if (cfmt.sound)
+                                curvoice.score = val;
+                            tr_p = 2;
+                        }
+                        break;
+                    default:
+                        switch (item.ToString().Substring(0, 4))
+                        {
+                            case "treb":
+                            case "bass":
+                            case "alto":
+                            case "teno":
+                            case "perc":
                                 s = item;
-                            else if (item.ToString().Substring(item.ToString().Length - 1) == "=")
-                                a.RemoveAt(0);
-                            break;
-                    }
-                    break;
+                                break;
+                            default:
+                                if ("GFC".IndexOf(item.ToString()[0]) >= 0)
+                                    s = item;
+                                else if (item.ToString().Substring(item.ToString().Length - 1) == "=")
+                                    a.RemoveAt(0);
+                                break;
+                        }
+                        break;
+                }
             }
-        }
-        if (pos != null)
-        {
-            curvoice.pos = clone(curvoice.pos);
-            foreach (var item in pos)
+            if (pos != null)
             {
-                curvoice.pos[item.Key] = item.Value;
+                curvoice.pos = clone(curvoice.pos);
+                foreach (var item in pos)
+                {
+                    curvoice.pos[item.Key] = item.Value;
+                }
             }
-        }
 
-        if (s != null)
-        {
-            s = new_clef(s);
             if (s != null)
             {
-                if (clefpit != null)
-                    s.clefpit = clefpit;
-                get_clef(s);
+                s = new_clef(s);
+                if (s != null)
+                {
+                    if (clefpit != null)
+                        s.clefpit = clefpit;
+                    get_clef(s);
+                }
             }
-        }
 
-        if ((tr_p & 2) != 0)
-        {
-            tr_p = (int)curvoice.sound + (int)curvoice.shift;
-            if (tr_p != 0)
-                curvoice.tr_snd = abc2svg.b40m(tr_p + 122) - 36;
-            else if (curvoice.tr_snd != null)
-                curvoice.tr_snd = 0;
-        }
-    }
-    void set_kv_parm(object a)    // array of items
-    {
-        if (curvoice.init == null)
-        {    // add the global parameters if not done yet
-            curvoice.init = true;
-            if (info.V != null)
+            if ((tr_p & 2) != 0)
             {
-                if (info.V[curvoice.id] != null)
-                    a = info.V[curvoice.id].Concat(a);
-                if (info.V['*'] != null)
-                    a = info.V['*'].Concat(a);
+                tr_p = (int)curvoice.sound + (int)curvoice.shift;
+                if (tr_p != 0)
+                    curvoice.tr_snd = abc2svg.b40m(tr_p + 122) - 36;
+                else if (curvoice.tr_snd != null)
+                    curvoice.tr_snd = 0;
             }
         }
-        if (a.Length > 0)
-            self.set_vp(a);
-    }
-    void memo_kv_parm(object vid,    // voice ID (V:) / '*' (K:/V:*)
-        object a)    // array of items
-    {
-        if (a.Length == 0)
-            return;
-        if (info.V == null)
-            info.V = new Dictionary<object, object>();
-        if (info.V[vid] != null)
-            info.V[vid].AddRange(a);
-        else
-            info.V[vid] = a;
-    }
 
+        // set the K: / V: parameters
+        void set_kv_parm(object a)    // array of items
+        {
+            if (curvoice.init == null)
+            {    // add the global parameters if not done yet
+                curvoice.init = true;
+                if (info.V != null)
+                {
+                    if (info.V[curvoice.id] != null)
+                        a = info.V[curvoice.id].Concat(a);
+                    if (info.V['*'] != null)
+                        a = info.V['*'].Concat(a);
+                }
+            }
+            if (a.Length > 0)
+                self.set_vp(a);
+        }
 
-    /*************************************************************/
+        // memorize the K:/V: parameters
+        void memo_kv_parm(object vid,    // voice ID (V:) / '*' (K:/V:*)
+            object a)    // array of items
+        {
+            if (a.Length == 0)
+                return;
+            if (info.V == null)
+                info.V = new Dictionary<object, object>();
+            if (info.V[vid] != null)
+                info.V[vid].AddRange(a);
+            else
+                info.V[vid] = a;
+        }
 
-    var a_gch = new List<object>();
-    var a_dcn = new List<object>();
-    object multicol;
-    var maps = new Dictionary<object, object>();
-    var qplet_tb = new sbyte[] { 0, 1 };
-    var ntb = "CDEab";
-    var reg_dur = new System.Text.RegularExpressions.Regex("aawwd");
-    var nil = "0";
-    var char_tb = new object[] { nil, " ", "\n", nil };
-
-
-
-    void new_key(object param)
-    {
-        int i, key_end;
-        object c, tmp, note;
-        int sf = "FCGDAEB".IndexOf(param.ToString()[0]) - 1;
-        int mode = 0;
-        var s = new Dictionary<object, object>
+        // K: key signature
+        // return the key and the voice/clef parameters
+        void new_key(object param)
+        {
+            int i, key_end;
+            object c, tmp, note;
+            int sf = "FCGDAEB".IndexOf(param.ToString()[0]) - 1;
+            int mode = 0;
+            var s = new Dictionary<object, object>
             {
                 { "type", C.KEY },
                 { "dur", 0 }
             };
 
-        set_ref(s);
+            set_ref(s);
 
-        i = 1;
-        if (sf < -1)
-        {
-            switch (param.ToString()[0])
+            i = 1;
+            if (sf < -1)
             {
-                case 'H':
-                    key_end = 1;
-                    if (param.ToString()[1].ToString().ToLower() != "p")
-                    {
-                        syntax(1, "Unknown bagpipe-like key");
-                        break;
-                    }
-                    s["k_bagpipe"] = param.ToString()[1];
-                    sf = param.ToString()[1] == 'P' ? 0 : 2;
-                    i++;
+                switch (param.ToString()[0])
+                {
+                    case 'H':
+                        key_end = 1;
+                        if (param.ToString()[1].ToString().ToLower() != "p")
+                        {
+                            syntax(1, "Unknown bagpipe-like key");
+                            break;
+                        }
+                        s["k_bagpipe"] = param.ToString()[1];
+                        sf = param.ToString()[1] == 'P' ? 0 : 2;
+                        i++;
 
-                    if (cfmt.temper == null)
-                        cfmt.temper = new double[] { 11.62f, 12.55f, 1.66f, 2.37f, 3.49f, 0, 1.66f, 2.37f, 3.49f, 4.41f, 5.53f, 0, 3.49f, 4.41f, 5.53f, 6.63f, 7.35f, 4.41f, 5.53f, 6.63f, 7.35f, 8.19f, 0, 6.63f, 7.35f, 8.19f, 9.39f, 10.51f, 0, 8.19f, 9.39f, 10.51f, 11.62f, 12.55f, 0, 10.51f, 11.62f, 12.55f, 1.66f, 1.66f };
-                    break;
-                case 'P':
-                    syntax(1, "K:P is deprecated");
-                    sf = 0;
-                    s["k_drum"] = true;
-                    key_end = 1;
-                    break;
-                case 'n':
-                    if (param.ToString().IndexOf("none") == 0)
-                    {
+                        if (cfmt.temper == null)
+                            cfmt.temper = new double[] { 11.62f, 12.55f, 1.66f, 2.37f, 3.49f, 0, 1.66f, 2.37f, 3.49f, 4.41f, 5.53f, 0, 3.49f, 4.41f, 5.53f, 6.63f, 7.35f, 4.41f, 5.53f, 6.63f, 7.35f, 8.19f, 0, 6.63f, 7.35f, 8.19f, 9.39f, 10.51f, 0, 8.19f, 9.39f, 10.51f, 11.62f, 12.55f, 0, 10.51f, 11.62f, 12.55f, 1.66f, 1.66f };
+                        break;
+                    case 'P':
+                        syntax(1, "K:P is deprecated");
                         sf = 0;
-                        s["k_none"] = true;
-                        i = 4;
-                        break;
-                    }
-                    goto default;
-                default:
-                    s["k_map"] = new sbyte[0];
-                    s["k_mode"] = 0;
-                    return;
-            }
-        }
-
-        if (!key_end)
-        {
-            switch (param.ToString().Substring(0, 3).ToLower())
-            {
-                default:
-                    if (param.ToString()[0] != 'm' || (param.ToString()[1] != ' ' && param.ToString()[1] != '\t' && param.ToString()[1] != '\n'))
-                    {
+                        s["k_drum"] = true;
                         key_end = 1;
                         break;
-                    }
-                    goto case "aeo";
-                case "aeo":
-                case "m":
-                case "min":
-                    sf -= 3;
-                    mode = 5;
-                    break;
-                case "dor":
-                    sf -= 2;
-                    mode = 1;
-                    break;
-                case "ion":
-                case "maj":
-                    break;
-                case "loc":
-                    sf -= 5;
-                    mode = 6;
-                    break;
-                case "lyd":
-                    sf += 1;
-                    mode = 3;
-                    break;
-                case "mix":
-                    sf -= 1;
-                    mode = 4;
-                    break;
-                case "phr":
-                    sf -= 4;
-                    mode = 2;
-                    break;
+                    case 'n':
+                        if (param.ToString().IndexOf("none") == 0)
+                        {
+                            sf = 0;
+                            s["k_none"] = true;
+                            i = 4;
+                            break;
+                        }
+                        goto default;
+                    default:
+                        s["k_map"] = new sbyte[0];
+                        s["k_mode"] = 0;
+                        return;
+                }
             }
-            if (key_end == 0)
-                param = param.ToString().Replace(new System.Text.RegularExpressions.Regex(@"\w+\s*"), "");
 
-            if (param.ToString().IndexOf("exp ") == 0)
+            if (!key_end)
             {
-                param = param.ToString().Replace(new System.Text.RegularExpressions.Regex(@"\w+\s*"), "");
-                if (param.ToString() == "")
-                    syntax(1, "No accidental after 'exp'");
-                s["exp"] = true;
-            }
-            c = param.ToString()[0];
-            if (c.ToString() == "^" || c.ToString() == "_" || c.ToString() == "=")
-            {
-                s["k_a_acc"] = new List<object>();
-                tmp = new scanBuf();
-                tmp.buffer = param.ToString();
-                do
+                switch (param.ToString().Substring(0, 3).ToLower())
                 {
-                    note = parse_acc_pit(tmp);
-                    if (note == null)
+                    default:
+                        if (param.ToString()[0] != 'm' || (param.ToString()[1] != ' ' && param.ToString()[1] != '\t' && param.ToString()[1] != '\n'))
+                        {
+                            key_end = 1;
+                            break;
+                        }
+                        goto case "aeo";
+                    case "aeo":
+                    case "m":
+                    case "min":
+                        sf -= 3;
+                        mode = 5;
                         break;
-                    ((List<object>)s["k_a_acc"]).Add(note);
-                    c = param.ToString()[tmp.index];
-                    while (c.ToString() == " ")
-                        c = param.ToString()[++tmp.index];
-                } while (c.ToString() == "^" || c.ToString() == "_" || c.ToString() == "=");
-                param = param.ToString().Substring(tmp.index);
+                    case "dor":
+                        sf -= 2;
+                        mode = 1;
+                        break;
+                    case "ion":
+                    case "maj":
+                        break;
+                    case "loc":
+                        sf -= 5;
+                        mode = 6;
+                        break;
+                    case "lyd":
+                        sf += 1;
+                        mode = 3;
+                        break;
+                    case "mix":
+                        sf -= 1;
+                        mode = 4;
+                        break;
+                    case "phr":
+                        sf -= 4;
+                        mode = 2;
+                        break;
+                }
+                if (key_end == 0)
+                    param = param.ToString().Replace(new System.Text.RegularExpressions.Regex(@"\w+\s*"), "");
+
+                if (param.ToString().IndexOf("exp ") == 0)
+                {
+                    param = param.ToString().Replace(new System.Text.RegularExpressions.Regex(@"\w+\s*"), "");
+                    if (param.ToString() == "")
+                        syntax(1, "No accidental after 'exp'");
+                    s["exp"] = true;
+                }
+                c = param.ToString()[0];
+                if (c.ToString() == "^" || c.ToString() == "_" || c.ToString() == "=")
+                {
+                    s["k_a_acc"] = new List<object>();
+                    tmp = new scanBuf();
+                    tmp.buffer = param.ToString();
+                    do
+                    {
+                        note = parse_acc_pit(tmp);
+                        if (note == null)
+                            break;
+                        ((List<object>)s["k_a_acc"]).Add(note);
+                        c = param.ToString()[tmp.index];
+                        while (c.ToString() == " ")
+                            c = param.ToString()[++tmp.index];
+                    } while (c.ToString() == "^" || c.ToString() == "_" || c.ToString() == "=");
+                    param = param.ToString().Substring(tmp.index);
+                }
+                else if (s.ContainsKey("exp") && param.ToString().IndexOf("none") == 0)
+                {
+                    sf = 0;
+                    param = param.ToString().Replace(new System.Text.RegularExpressions.Regex(@"\w+\s*"), "");
+                }
             }
-            else if (s.ContainsKey("exp") && param.ToString().IndexOf("none") == 0)
+
+            if (sf < -7 || sf > 7)
             {
-                sf = 0;
-                param = param.ToString().Replace(new System.Text.RegularExpressions.Regex(@"\w+\s*"), "");
+                syntax(1, "Key with double sharps/flats");
+                if (sf > 7)
+                    sf -= 12;
+                else
+                    sf += 12;
             }
-        }
+            s["k_sf"] = sf;
 
-        if (sf < -7 || sf > 7)
-        {
-            syntax(1, "Key with double sharps/flats");
-            if (sf > 7)
-                sf -= 12;
-            else
-                sf += 12;
-        }
-        s["k_sf"] = sf;
-
-        s["k_map"] = s.ContainsKey("k_bagpipe") && sf == 0 ? abc2svg.keys[9] : abc2svg.keys[sf + 7];
-        if (s.ContainsKey("k_a_acc"))
-        {
-            s["k_map"] = ((sbyte[])s["k_map"]).Clone();
-            i = ((List<object>)s["k_a_acc"]).Count;
-            while (--i >= 0)
+            s["k_map"] = s.ContainsKey("k_bagpipe") && sf == 0 ? abc2svg.keys[9] : abc2svg.keys[sf + 7];
+            if (s.ContainsKey("k_a_acc"))
             {
-                note = ((List<object>)s["k_a_acc"])[i];
-                ((sbyte[])s["k_map"])[(int)(note["pit"]) + 19 % 7] = (sbyte)note["acc"];
+                s["k_map"] = ((sbyte[])s["k_map"]).Clone();
+                i = ((List<object>)s["k_a_acc"]).Count;
+                while (--i >= 0)
+                {
+                    note = ((List<object>)s["k_a_acc"])[i];
+                    ((sbyte[])s["k_map"])[(int)(note["pit"]) + 19 % 7] = (sbyte)note["acc"];
+                }
             }
+            s["k_mode"] = mode;
+
+            s["k_b40"] = new int[] { 1, 24, 7, 30, 13, 36, 19, 2, 25, 8, 31, 14, 37, 20, 3 }[sf + 7];
+
+            return [s, info_split(param)];
         }
-        s["k_mode"] = mode;
 
-        s["k_b40"] = new int[] { 1, 24, 7, 30, 13, 36, 19, 2, 25, 8, 31, 14, 37, 20, 3 }[sf + 7];
-
-        return [s, info_split(param)];
-    }
-
-    void new_meter(object p)
-    {
-        object p_v;
-        var s = new Dictionary<object, object>
+        // M: meter
+        void new_meter(object p)
+        {
+            object p_v;
+            var s = new Dictionary<object, object>
             {
                 { "type", C.METER },
                 { "dur", 0 },
                 { "a_meter", new List<object>() }
             };
-        var meter = new Dictionary<object, object>();
-        object val, v;
-        int m1 = 0, m2;
-        int i = 0, j;
-        int wmeasure;
-        bool in_parenth;
+            var meter = new Dictionary<object, object>();
+            object val, v;
+            int m1 = 0, m2;
+            int i = 0, j;
+            int wmeasure;
+            bool in_parenth;
 
-        set_ref(s);
+            set_ref(s);
 
-        if (p.ToString().IndexOf("none") == 0)
-        {
-            i = 4;
-            wmeasure = 1;
-        }
-        else
-        {
-            wmeasure = 0;
-            while (i < p.ToString().Length)
+            if (p.ToString().IndexOf("none") == 0)
             {
-                if (p.ToString()[i] == '=')
-                    break;
-                switch (p.ToString()[i])
+                i = 4;
+                wmeasure = 1;
+            }
+            else
+            {
+                wmeasure = 0;
+                while (i < p.ToString().Length)
                 {
-                    case 'C':
-                        meter["top"] = p.ToString()[i++];
-                        if (m1 == 0)
-                        {
-                            m1 = 4;
-                            m2 = 4;
-                        }
+                    if (p.ToString()[i] == '=')
                         break;
-                    case 'c':
-                    case 'o':
-                        meter["top"] = p.ToString()[i++];
-                        if (m1 == 0)
-                        {
-                            if (p.ToString()[i - 1] == 'c')
-                            {
-                                m1 = 2;
-                                m2 = 4;
-                            }
-                            else
-                            {
-                                m1 = 3;
-                                m2 = 4;
-                            }
-                            switch (p.ToString()[i])
-                            {
-                                case '|':
-                                    m2 /= 2;
-                                    break;
-                                case '.':
-                                    m1 *= 3;
-                                    m2 *= 2;
-                                    break;
-                            }
-                        }
-                        break;
-                    case '.':
-                    case '|':
-                        m1 = 0;
-                        meter["top"] = p.ToString()[i++];
-                        break;
-                    case '(':
-                        if (p.ToString()[i + 1] == '(')
-                        {
-                            in_parenth = true;
+                    switch (p.ToString()[i])
+                    {
+                        case 'C':
                             meter["top"] = p.ToString()[i++];
-                            ((List<object>)s["a_meter"]).Add(meter);
-                            meter = new Dictionary<object, object>();
-                        }
-                        j = i + 1;
-                        while (j < p.ToString().Length)
-                        {
-                            if (p.ToString()[j] == ')' || p.ToString()[j] == '/')
-                                break;
-                            j++;
-                        }
-                        if (p.ToString()[j] == ')' && p.ToString()[j + 1] == '/')
-                        {
-                            i++;
-                            continue;
-                        }
-                        if (p.ToString()[j] == '/')
-                        {
-                            i++;
-                            if (p.ToString()[i] <= '0' || p.ToString()[i] > '9')
+                            if (m1 == 0)
                             {
-                                syntax(1, "Bad char '$1' in M:", p.ToString()[i]);
-                                return;
+                                m1 = 4;
+                                m2 = 4;
                             }
-                            meter["bot"] = p.ToString()[i++];
-                            while (p.ToString()[i] >= '0' && p.ToString()[i] <= '9')
-                                meter["bot"] += p.ToString()[i++];
                             break;
-                        }
-                        if (p.ToString()[i] != ' ' && p.ToString()[i] != '+')
-                            break;
-                        if (i >= p.ToString().Length || p.ToString()[i + 1] == '(')
-                            break;
-                        meter["top"] += p.ToString()[i++];
-                        break;
-                    case ')':
-                        in_parenth = p.ToString()[i] == '(';
-                        meter["top"] = p.ToString()[i++];
-                        ((List<object>)s["a_meter"]).Add(meter);
-                        meter = new Dictionary<object, object>();
-                        continue;
-                    default:
-                        if (p.ToString()[i] <= '0' || p.ToString()[i] > '9')
-                        {
-                            syntax(1, "Bad char '$1' in M:", p.ToString()[i]);
-                            return;
-                        }
-                        m2 = 2;
-                        meter["top"] = p.ToString()[i++];
-                        for (; ; )
-                        {
-                            while (p.ToString()[i] >= '0' && p.ToString()[i] <= '9')
-                                meter["top"] += p.ToString()[i++];
-                            if (p.ToString()[i] == ')')
+                        case 'c':
+                        case 'o':
+                            meter["top"] = p.ToString()[i++];
+                            if (m1 == 0)
                             {
-                                if (p.ToString()[i + 1] != '/')
+                                if (p.ToString()[i - 1] == 'c')
+                                {
+                                    m1 = 2;
+                                    m2 = 4;
+                                }
+                                else
+                                {
+                                    m1 = 3;
+                                    m2 = 4;
+                                }
+                                switch (p.ToString()[i])
+                                {
+                                    case '|':
+                                        m2 /= 2;
+                                        break;
+                                    case '.':
+                                        m1 *= 3;
+                                        m2 *= 2;
+                                        break;
+                                }
+                            }
+                            break;
+                        case '.':
+                        case '|':
+                            m1 = 0;
+                            meter["top"] = p.ToString()[i++];
+                            break;
+                        case '(':
+                            if (p.ToString()[i + 1] == '(')
+                            {
+                                in_parenth = true;
+                                meter["top"] = p.ToString()[i++];
+                                ((List<object>)s["a_meter"]).Add(meter);
+                                meter = new Dictionary<object, object>();
+                            }
+                            j = i + 1;
+                            while (j < p.ToString().Length)
+                            {
+                                if (p.ToString()[j] == ')' || p.ToString()[j] == '/')
                                     break;
-                                i++;
+                                j++;
                             }
-                            if (p.ToString()[i] == '/')
+                            if (p.ToString()[j] == ')' && p.ToString()[j + 1] == '/')
+                            {
+                                i++;
+                                continue;
+                            }
+                            if (p.ToString()[j] == '/')
                             {
                                 i++;
                                 if (p.ToString()[i] <= '0' || p.ToString()[i] > '9')
@@ -1067,245 +1039,125 @@ namespace autocad_part2
                             if (i >= p.ToString().Length || p.ToString()[i + 1] == '(')
                                 break;
                             meter["top"] += p.ToString()[i++];
-                        }
-                        m1 = Convert.ToInt32(meter["top"]);
-                        break;
-                }
-                if (!in_parenth)
-                {
-                    if (meter.ContainsKey("bot"))
-                        m2 = Convert.ToInt32(meter["bot"]);
-                    wmeasure += m1 * C.BLEN / m2;
-                }
-                ((List<object>)s["a_meter"]).Add(meter);
-                meter = new Dictionary<object, object>();
-                while (p.ToString()[i] == ' ')
-                    i++;
-                if (p.ToString()[i] == '+')
-                {
-                    meter["top"] = p.ToString()[i++];
+                            break;
+                        case ')':
+                            in_parenth = p.ToString()[i] == '(';
+                            meter["top"] = p.ToString()[i++];
+                            ((List<object>)s["a_meter"]).Add(meter);
+                            meter = new Dictionary<object, object>();
+                            continue;
+                        default:
+                            if (p.ToString()[i] <= '0' || p.ToString()[i] > '9')
+                            {
+                                syntax(1, "Bad char '$1' in M:", p.ToString()[i]);
+                                return;
+                            }
+                            m2 = 2;
+                            meter["top"] = p.ToString()[i++];
+                            for (; ; )
+                            {
+                                while (p.ToString()[i] >= '0' && p.ToString()[i] <= '9')
+                                    meter["top"] += p.ToString()[i++];
+                                if (p.ToString()[i] == ')')
+                                {
+                                    if (p.ToString()[i + 1] != '/')
+                                        break;
+                                    i++;
+                                }
+                                if (p.ToString()[i] == '/')
+                                {
+                                    i++;
+                                    if (p.ToString()[i] <= '0' || p.ToString()[i] > '9')
+                                    {
+                                        syntax(1, "Bad char '$1' in M:", p.ToString()[i]);
+                                        return;
+                                    }
+                                    meter["bot"] = p.ToString()[i++];
+                                    while (p.ToString()[i] >= '0' && p.ToString()[i] <= '9')
+                                        meter["bot"] += p.ToString()[i++];
+                                    break;
+                                }
+                                if (p.ToString()[i] != ' ' && p.ToString()[i] != '+')
+                                    break;
+                                if (i >= p.ToString().Length || p.ToString()[i + 1] == '(')
+                                    break;
+                                meter["top"] += p.ToString()[i++];
+                            }
+                            m1 = Convert.ToInt32(meter["top"]);
+                            break;
+                    }
+                    if (!in_parenth)
+                    {
+                        if (meter.ContainsKey("bot"))
+                            m2 = Convert.ToInt32(meter["bot"]);
+                        wmeasure += m1 * C.BLEN / m2;
+                    }
                     ((List<object>)s["a_meter"]).Add(meter);
                     meter = new Dictionary<object, object>();
+                    while (p.ToString()[i] == ' ')
+                        i++;
+                    if (p.ToString()[i] == '+')
+                    {
+                        meter["top"] = p.ToString()[i++];
+                        ((List<object>)s["a_meter"]).Add(meter);
+                        meter = new Dictionary<object, object>();
+                    }
                 }
             }
-        }
-        if (p.ToString()[i] == '=')
-        {
-            val = System.Text.RegularExpressions.Regex.Match(p.ToString().Substring(++i), @"^(\d+)\/(\d+)$");
-            if (val == null)
+            if (p.ToString()[i] == '=')
             {
-                syntax(1, "Bad duration '$1' in M:", p.ToString().Substring(i));
+                val = System.Text.RegularExpressions.Regex.Match(p.ToString().Substring(++i), @"^(\d+)\/(\d+)$");
+                if (val == null)
+                {
+                    syntax(1, "Bad duration '$1' in M:", p.ToString().Substring(i));
+                    return;
+                }
+                wmeasure = C.BLEN * Convert.ToInt32(val.Groups[1].Value) / Convert.ToInt32(val.Groups[2].Value);
+            }
+            if (wmeasure == 0)
+            {
+                syntax(1, errs.bad_val, "M:");
                 return;
             }
-            wmeasure = C.BLEN * Convert.ToInt32(val.Groups[1].Value) / Convert.ToInt32(val.Groups[2].Value);
-        }
-        if (wmeasure == 0)
-        {
-            syntax(1, errs.bad_val, "M:");
-            return;
-        }
-        s["wmeasure"] = wmeasure;
+            s["wmeasure"] = wmeasure;
 
-        if (!cfmt.writefields.Contains("M"))
-            ((List<object>)s["a_meter"]).Clear();
+            if (!cfmt.writefields.Contains("M"))
+                ((List<object>)s["a_meter"]).Clear();
 
-        if (parse.state != 3)
-        {
-            info.M = p.ToString();
-            glovar.meter = s;
-            if (parse.state != 0)
+            if (parse.state != 3)
             {
-                if (glovar.ulen == null)
+                info.M = p.ToString();
+                glovar.meter = s;
+                if (parse.state != 0)
                 {
-                    if (wmeasure <= 1 || wmeasure >= C.BLEN * 3 / 4)
-                        glovar.ulen = C.BLEN / 8;
-                    else
-                        glovar.ulen = C.BLEN / 16;
-                }
-                for (v = 0; v < voice_tb.Count; v++)
-                {
-                    voice_tb[v].meter = s;
-                    voice_tb[v].wmeasure = wmeasure;
+                    if (glovar.ulen == null)
+                    {
+                        if (wmeasure <= 1 || wmeasure >= C.BLEN * 3 / 4)
+                            glovar.ulen = C.BLEN / 8;
+                        else
+                            glovar.ulen = C.BLEN / 16;
+                    }
+                    for (v = 0; v < voice_tb.Count; v++)
+                    {
+                        voice_tb[v].meter = s;
+                        voice_tb[v].wmeasure = wmeasure;
+                    }
                 }
             }
-        }
-        else
-        {
-            curvoice.wmeasure = wmeasure;
-            if (is_voice_sig())
-                curvoice.meter = s;
             else
-                sym_link(s);
+            {
+                curvoice.wmeasure = wmeasure;
+                if (is_voice_sig())
+                    curvoice.meter = s;
+                else
+                    sym_link(s);
 
-            for (p_v = curvoice.voice_down; p_v != null; p_v = p_v.voice_down)
-                p_v.wmeasure = wmeasure;
-        }
-    }
-
-
-    /**************************************************************/
-
-
-    public class VoiceTempo
-    {
-        public string type { get; set; }
-        public int dur { get; set; }
-    }
-
-    public class VoiceBar
-    {
-        public string type { get; set; }
-        public string fname { get; set; }
-        public int istart { get; set; }
-        public int dur { get; set; }
-        public int multi { get; set; }
-        public string text { get; set; }
-        public int iend { get; set; }
-        public bool bar_dotted { get; set; }
-        public int rbstop { get; set; }
-        public int bar_num { get; set; }
-        public bool invis { get; set; }
-        public bool norepbra { get; set; }
-        public int rbstart { get; set; }
-        public int st { get; set; }
-        public int xsh { get; set; }
-    }
-
-    public class VoicePart
-    {
-        public string type { get; set; }
-        public string text { get; set; }
-        public int time { get; set; }
-        public bool invis { get; set; }
-    }
-
-    public class VoiceRemark
-    {
-        public string type { get; set; }
-        public string text { get; set; }
-        public int dur { get; set; }
-    }
-
-    public class VoiceNote
-    {
-        public int pit { get; set; }
-        public int shhd { get; set; }
-        public int shac { get; set; }
-        public int[] acc { get; set; }
-    }
-
-    public class Voice
-    {
-        public List<VoiceTempo> tempo_notes { get; set; }
-        public string tempo_ca { get; set; }
-        public int new_beat { get; set; }
-        public int tempo { get; set; }
-        public bool invis { get; set; }
-        public string tempo_str1 { get; set; }
-        public string tempo_str2 { get; set; }
-        public string text { get; set; }
-        public int time { get; set; }
-        public bool ignore { get; set; }
-        public bool second { get; set; }
-        public bool norepbra { get; set; }
-        public int v { get; set; }
-        public int ulen { get; set; }
-        public int dur_fact { get; set; }
-        public List<int> acc_tie { get; set; }
-        public List<int> acc_tie_rep { get; set; }
-        public VoiceNote tie_s_rep { get; set; }
-        public VoiceNote tie_s { get; set; }
-        public List<int> acc { get; set; }
-        public VoiceBar last_sym { get; set; }
-        public VoiceBar lyric_restart { get; set; }
-        public VoiceBar sym_restart { get; set; }
-        public int st { get; set; }
-        public int eoln { get; set; }
-        public bool norepbra { get; set; }
-        public string bar_type { get; set; }
-        public int rbstop { get; set; }
-        public int rbstart { get; set; }
-        public bool bar_dotted { get; set; }
-        public bool invis { get; set; }
-        public bool norepbra { get; set; }
-        public int xsh { get; set; }
-        public int[] acc { get; set; }
-        public int pit { get; set; }
-        public int shhd { get; set; }
-        public int shac { get; set; }
-    }
-
-    public class Parse
-    {
-        public int state { get; set; }
-        public int bol { get; set; }
-        public string fname { get; set; }
-        public int line { get; set; }
-    }
-
-    public class ParSy
-    {
-        public List<Voice> voices { get; set; }
-        public List<Staff> staves { get; set; }
-    }
-
-    public class Staff
-    {
-        public int flags { get; set; }
-    }
-
-    public class Info
-    {
-        public string Q { get; set; }
-        public string P { get; set; }
-        public string N { get; set; }
-        public string R { get; set; }
-    }
-
-    public class Glovar
-    {
-        public Voice tempo { get; set; }
-        public int new_nbar { get; set; }
-        public int ulen { get; set; }
-    }
-
-    public class Line
-    {
-        public string buffer { get; set; }
-        public int index { get; set; }
-
-        public char char1()
-        {
-            return buffer[index];
+                for (p_v = curvoice.voice_down; p_v != null; p_v = p_v.voice_down)
+                    p_v.wmeasure = wmeasure;
+            }
         }
 
-        public char next_char()
-        {
-            return buffer[++index];
-        }
-    }
-
-    public class CodeTranslationAssistant
-    {
-        private static Regex reg_dur = new Regex(@"(\d+)\/(\d+)");
-        private static string ntb = "CDEab";
-        private static Info info = new Info();
-        private static Glovar glovar = new Glovar();
-        private static ParSy par_sy = new ParSy();
-        private static Parse parse = new Parse();
-        private static Voice curvoice = new Voice();
-        private static int C_BLEN = 0;
-
-        int a_gch = 0;
-        int[] a_dcn = new List<int>();
-        int multicol = 0;
-        Dictionary<string, int> maps = new Dictionary<string, int>();
-        int[] qplet_tb = new int[] { 0, 1 };
-        string ntb = "CDEab";
-        var reg_dur = new Regex(@"aawwd");
-
-        List<string> char_tb = new List<string> { null, " ", "\n", null };
-
+        /* Q: tempo */
         void new_tempo(string text)
         {
             int i, c, d, nd;
@@ -1415,6 +1267,7 @@ namespace autocad_part2
                 sym_link(s);
         }
 
+        // treat the information fields which may embedded
         void do_info(string info_type, string text)
         {
             Voice s;
@@ -1541,6 +1394,9 @@ namespace autocad_part2
             }
         }
 
+        // music line parsing functions
+
+        /* -- adjust the duration and time of symbols in a measure when L:auto -- */
         void adjust_dur(Voice s)
         {
             VoiceBar s2;
@@ -1577,6 +1433,7 @@ namespace autocad_part2
             curvoice.time = s.time = time;
         }
 
+        /* -- parse a bar -- */
         void new_bar()
         {
             VoiceBar s2;
@@ -1770,6 +1627,8 @@ namespace autocad_part2
                 curvoice.acc = new List<int>();
         }
 
+        // parse %%staves / %%score
+        // return an array of [vid, flags] / null
         List<int[]> parse_staves(int p)
         {
             int v, vid;
@@ -1926,6 +1785,7 @@ namespace autocad_part2
             return a_vf;
         }
 
+        // split an info string
         List<string> info_split(string text)
         {
             if (string.IsNullOrEmpty(text))
@@ -1956,6 +1816,7 @@ namespace autocad_part2
             return new int[] { num, den };
         }
 
+        // parse the note accidental and pitch
         int[] parse_acc_pit(Line line)
         {
             Voice note;
@@ -2033,12 +1894,27 @@ namespace autocad_part2
             pit: pit,
         shhd: 0,
         shac: 0
-                }
+                    }
             if (acc)
                 note.acc = acc;
             return new int[] { note, acc, pit };
         }
-        void set_map(Note note, int acc)
+
+
+        // return the mapping of a note
+        //
+        // The global 'maps' object is indexed by the map name.
+        // Its content is an object ('map') indexed from the map type:
+        // - normal = ABC note
+        // - octave = 'o' + ABC note in C..B interval
+        // - key	= 'k' + scale index
+        // - all	= 'all'
+        // The 'map' is stored in the note. It is an array of
+        //	[0] array of heads (glyph names)
+        //	[1] print (note)
+        //	[2] color
+        //	[3] play (note)
+        void set_map(NoteItem note, int acc)
         {
             var pit = note.pit;
             var nn = not2abc(pit, acc);
@@ -2047,7 +1923,7 @@ namespace autocad_part2
             if (!map.ContainsKey(nn))
             {
                 nn = 'o' + nn.Replace(/[',]+/, '');    // ' octave
-                    if (!map.ContainsKey(nn))
+                        if (!map.ContainsKey(nn))
                 {
                     nn = 'k' + ntb[(pit + 75 -
                         curvoice.ckey.k_sf * 11) % 7];
@@ -2078,9 +1954,11 @@ namespace autocad_part2
         }
 
 
-        Note parse_basic_note(string line, int ulen)
+        /* -- parse note or rest with pitch and length -- */
+        // 'line' is not always 'parse.line'
+        NoteItem parse_basic_note(string line, int ulen)
         {
-            Note note;
+            NoteItem note;
             var nd = parse_dur(line);
 
             if (line[0] == '0')
@@ -2122,50 +2000,212 @@ namespace autocad_part2
         }
 
 
-
-
-
-
-
-    }
-}
-
-interface Voice
-{
-    int[] acc_tie;
-    int[] acc;
-}
-
-static void Main(string[] args)
-{
-    int[] a_gch;
-    List<int> a_dcn = new List<int>();
-    int multicol;
-    Dictionary<string, int> maps = new Dictionary<string, int>();
-    int[] qplet_tb = new int[] { 0, 1 };
-    string ntb = "CDEab";
-    Regex reg_dur = new Regex("aawwd");
-    string nil = "0";
-    string[] char_tb = new string[] { null, " ", "\n", null };
-
-
-
-    Voice curvoice;
-
-
-
-    int[] new_note(int grace, int sls)
+        // on end of slur, create the slur
+        public void slur_add(VoiceItem s, object nt)
     {
-        int note, s, in_chord, c, dcn, type, tie_s, acc_tie;
-        int i, n, s2, nd, res, num, dur, apit, div, ty;
-        int dpit = 0;
+        int i;
+        VoiceItem s2;
+        SlurGroup sl;
+
+        for (i = curvoice.sls.Count - 1; i >= 0; i--)
+        {
+            sl = curvoice.sls[i];
+
+            if (sl.ss == s)
+                continue;
+            curvoice.sls.RemoveAt(i);
+            sl.se = s;
+            if (nt != null)
+                sl.nte = nt;
+            s2 = sl.ss;
+            if (s2.sls == null)
+                s2.sls = new List<SlurGroup>();
+            s2.sls.Add(sl);
+
+            if (sl.grace != null)
+                sl.grace.sl1 = true;
+            return;
+        }
+
+        for (s2 = s.prev; s2 != null; s2 = s2.prev)
+        {
+            if (s2.type == C.BAR
+                && s2.bar_type[0] == ':'
+                && s2.text != null)
+            {
+                if (s2.sls == null)
+                    s2.sls = new List<SlurGroup>();
+                s2.sls.Add(new SlurGroup
+                {
+                    ty = C.SL_AUTO,
+                    ss = s2,
+                    se = s
+                });
+                if (nt != null)
+                    s2.sls[s2.sls.Count - 1].nte = nt;
+                return;
+            }
+        }
+
+        if (s.sls == null)
+            s.sls = new List<SlurGroup>();
+        s.sls.Add(new SlurGroup
+        {
+            ty = C.SL_AUTO,
+            se = s,
+            loc = 'i'
+        });
+        if (nt != null)
+            s.sls[s.sls.Count - 1].nte = nt;
+    }
+
+        // convert a diatonic pitch and accidental to a MIDI pitch with cents
+        public int pit2mid(int pit, int acc)
+    {
+        int[] p = { 0, 2, 4, 5, 7, 9, 11 };
+        int o = (pit / 7) * 12;
+        int p0, p1, s, b40;
+
+        if (curvoice.snd_oct != null)
+            o += curvoice.snd_oct.Value;
+        if (acc == 3)
+            acc = 0;
+        if (acc != null)
+        {
+            if (acc.GetType() == typeof(object))
+            {
+                s = (int)(((object[])acc)[0] / ((object[])acc)[1]);
+                if (((object[])acc)[1] == 100)
+                    return p[pit % 7] + o + s;
+            }
+            else
+            {
+                s = acc;
+            }
+        }
+        else
+        {
+            if (cfmt.temper != null)
+                return cfmt.temper[abc2svg.p_b40[pit % 7]] + o;
+            return p[pit % 7] + o;
+        }
+        if (cfmt.nedo == null)
+        {
+            if (cfmt.temper == null)
+            {
+                p += o + s;
+                return p;
+            }
+        }
+        else
+        {
+            if (acc.GetType() != typeof(object))
+            {
+                b40 = abc2svg.p_b40[pit % 7] + acc;
+                return cfmt.temper[b40] + o;
+            }
+
+            if (((object[])acc)[1] == cfmt.nedo)
+            {
+                b40 = abc2svg.p_b40[pit % 7];
+                return cfmt.temper[b40] + o + s;
+            }
+        }
+
+        p0 = cfmt.temper[abc2svg.p_b40[pit % 7]];
+        if (s > 0)
+        {
+            p1 = cfmt.temper[(abc2svg.p_b40[pit % 7] + 1) % 40];
+            if (p1 < p0)
+                p1 += 12;
+        }
+        else
+        {
+            p1 = cfmt.temper[(abc2svg.p_b40[pit % 7] + 39) % 40];
+            if (p1 > p0)
+                p1 -= 12;
+            s = -s;
+        }
+        return p0 + o + (p1 - p0) * s;
+    }
+
+        // handle the ties
+        // @s = tie ending smbol
+        // @tei_s = tie starting symbol
+        public void do_ties(VoiceItem s, VoiceItem tie_s)
+    {
+        int i, m, not1, not2, mid, g;
+        int nt = 0;
+        bool se = (tie_s.time + tie_s.dur) == curvoice.time;
+
+        for (m = 0; m <= s.nhd; m++)
+        {
+            not2 = s.notes[m];
+            mid = not2.midi.Value;
+            if (tie_s.type != C.GRACE)
+            {
+                for (i = 0; i <= tie_s.nhd; i++)
+                {
+                    not1 = tie_s.notes[i];
+                    if (!not1.tie_ty.HasValue)
+                        continue;
+                    if (not1.midi == mid
+                        && (!se
+                            || !not1.tie_e.HasValue))
+                    {
+                        not2.tie_s = not1;
+                        not2.s = s;
+                        if (se)
+                        {
+                            not1.tie_e = not2;
+                            not1.s = tie_s;
+                        }
+                        nt++;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for (g = tie_s.extra; g != null; g = g.next)
+                {
+                    not1 = g.notes[0];
+                    if (!not1.tie_ty.HasValue)
+                        continue;
+                    if (not1.midi == mid)
+                    {
+                        g.ti1 = true;
+                        not2.tie_s = not1;
+                        not2.s = s;
+                        not1.tie_e = not2;
+                        not1.s = g;
+                        nt++;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (nt == 0)
+            error(1, tie_s, "Bad tie");
+        else
+            s.ti2 = true;
+    }
+
+        // (possible hook)
+        public VoiceItem new_note(bool grace, List<SlurGroup> sls)
+    {
+        VoiceItem note, s, s2;
+            object tie_s, acc_tie;
+        bool in_chord;
+        int c, dcn, type,  i, n, nd, res, num, dur, apit, div, ty, dpit = 0;
         List<int> sl1 = new List<int>();
         int line = parse.line;
-        List<int> a_dcn_sav = a_dcn;        // save parsed decoration names
+        List<string> a_dcn_sav = a_dcn;
 
-        a_dcn = new List<int>();
+        a_dcn = new List<string>();
         parse.stemless = false;
-        s = new
+        s = new VoiceItem
         {
             type = C.NOTE,
             fname = parse.fname,
@@ -2176,7 +2216,7 @@ static void Main(string[] args)
         };
         s.istart = parse.bol + line.index;
 
-        if (curvoice.color)
+        if (curvoice.color != null)
             s.color = curvoice.color;
 
         if (grace)
@@ -2185,25 +2225,26 @@ static void Main(string[] args)
         }
         else
         {
-            if (curvoice.tie_s)
-            {    // if tie from previous note / grace note
+            if (curvoice.tie_s != null)
+            {
                 tie_s = curvoice.tie_s;
                 curvoice.tie_s = null;
             }
-            if (a_gch)
+            if (a_gch != null)
                 csan_add(s);
-            if (parse.repeat_n)
+            if (parse.repeat_n != 0)
             {
                 s.repeat_n = parse.repeat_n;
                 s.repeat_k = parse.repeat_k;
                 parse.repeat_n = 0;
             }
         }
-        c = line.char1();
+        c = line.char();
         switch (c)
         {
             case 'X':
                 s.invis = true;
+                goto case 'Z';
             case 'Z':
                 s.type = C.MREST;
                 c = line.next_char();
@@ -2215,32 +2256,34 @@ static void Main(string[] args)
                 }
                 s.dur = curvoice.wmeasure * s.nmes;
 
-                // ignore if in second voice
-                if (curvoice.second)
+                if (curvoice.second != null)
                 {
-                    delete curvoice.eoln;    // ignore the end of line
+                    curvoice.eoln = null;
                     curvoice.time += s.dur;
                     return null;
                 }
 
-                // convert 'Z'/'Z1' to a whole measure rest
                 if (s.nmes == 1)
                 {
                     s.type = C.REST;
                     s.dur_orig = s.dur;
-                    s.fmr = 1;        // full measure rest
-                    s.notes = new int[] {
-                                pit = 18,
-                                dur = s.dur
-                            };
+                    s.fmr = 1;
+                    s.notes = new List<noteItem>
+                {
+                    new noteItem
+                    {
+                        pit = 18,
+                        dur = s.dur
+                    }
+                };
                 }
                 else
                 {
                     glovar.mrest_p = true;
-                    if (par_sy.voices.length == 1)
+                    if (par_sy.voices.Count == 1)
                     {
                         s.tacet = curvoice.tacet;
-                        delete s.invis;    // show the 'H' when 'Xn'
+                        s.invis = null;
                     }
                 }
                 break;
@@ -2253,7 +2296,7 @@ static void Main(string[] args)
                     s.width = line.get_int();
                 else
                     s.width = 10;
-                if (tie_s)
+                if (tie_s != null)
                 {
                     curvoice.tie_s = tie_s;
                     tie_s = null;
@@ -2261,6 +2304,7 @@ static void Main(string[] args)
                 break;
             case 'x':
                 s.invis = true;
+                goto case 'z';
             case 'z':
                 s.type = C.REST;
                 line.index++;
@@ -2270,53 +2314,54 @@ static void Main(string[] args)
                     curvoice.ulen) * nd[0] / nd[1];
                 s.dur = s.dur_orig * curvoice.dur_fact;
                 if (s.dur == curvoice.wmeasure)
-                    s.fmr = 1;        // full measure rest
-                s.notes = new int[] {
-                            pit = 18,
-                            dur = s.dur_orig
-                        };
+                    s.fmr = 1;
+                s.notes = new List<noteItem>
+            {
+                new noteItem
+                {
+                    pit = 18,
+                    dur = s.dur_orig
+                }
+            };
                 break;
-            case '[':            // chord
+            case '[':
                 in_chord = true;
                 c = line.next_char();
-            // fall thru
-            default:            // accidental, chord, note
-                if (curvoice.acc_tie)
+                goto default;
+            default:
+                if (curvoice.acc_tie != null)
                 {
                     acc_tie = curvoice.acc_tie;
                     curvoice.acc_tie = null;
                 }
-                s.notes = new List<int>();
+                s.notes = new List<noteItem>();
 
-                // loop on the chord
                 while (true)
                 {
-
-                    // when in chord, get the slurs and decorations
                     if (in_chord)
                     {
                         while (true)
                         {
-                            if (!c)
+                            if (c == 0)
                                 break;
-                            i = c.charCodeAt(0);
+                            i = c;
                             if (i >= 128)
                             {
                                 syntax(1, errs.not_ascii);
                                 return null;
                             }
                             type = char_tb[i];
-                            switch (type[0])
+                            switch (type)
                             {
                                 case '(':
-                                    sl1.push(parse_vpos());
+                                    sl1.Add(parse_vpos());
                                     c = line.char();
                                     continue;
                                 case '!':
-                                    if (type.length > 1)
-                                        a_dcn.push(type.slice(1, -1));
+                                    if (type.Length > 1)
+                                        a_dcn.Add(type.Substring(1, type.Length - 2));
                                     else
-                                        get_deco();    // line -> a_dcn
+                                        get_deco();
                                     c = line.next_char();
                                     continue;
                             }
@@ -2328,26 +2373,25 @@ static void Main(string[] args)
                             curvoice.ulen < 0 ?
                                 C.BLEN :
                                 curvoice.ulen);
-                    if (!note)
+                    if (note == null)
                         return null;
 
-                    if (curvoice.octave)
-                        note.pit += curvoice.octave * 7;
+                    if (curvoice.octave != null)
+                        note.pit += curvoice.octave.Value * 7;
 
-                    // get the real accidental
-                    apit = note.pit + 19        // pitch from C-1
-                            i = note.acc;
-                    if (!i)
+                    apit = note.pit + 19;
+                    i = note.acc;
+                    if (i == 0)
                     {
                         if (cfmt["propagate-accidentals"][0] == 'p')
                             i = curvoice.acc[apit % 7];
                         else
                             i = curvoice.acc[apit];
-                        if (!i)
-                            i = curvoice.ckey.k_map[apit % 7] || 0;
+                        if (i == 0)
+                            i = curvoice.ckey.k_map[apit % 7] ?? 0;
                     }
 
-                    if (i)
+                    if (i != 0)
                     {
                         if (cfmt["propagate-accidentals"][0] == 'p')
                             curvoice.acc[apit % 7] = i;
@@ -2355,25 +2399,20 @@ static void Main(string[] args)
                             curvoice.acc[apit] = i;
                     }
 
-                    if (acc_tie && acc_tie[apit])
-                        i = acc_tie[apit];    // tied note
+                    if (acc_tie != null && acc_tie[apit] != null)
+                        i = acc_tie[apit];
 
-                    // map
-                    if (curvoice.map
-                        && maps[curvoice.map])
+                    if (curvoice.map != null && maps[curvoice.map] != null)
                         set_map(note, i);
 
-                    // set the MIDI pitch
-                    if (!note.midi)        // if not map play
+                    if (note.midi == null)
                         note.midi = pit2mid(apit, i);
 
-                    // transpose
-                    if (curvoice.tr_sco
-                        && !note.notrp)
+                    if (curvoice.tr_sco != null && !note.notrp)
                     {
                         i = nt_trans(note, i);
                         if (i == -3)
-                        {        // if triple sharp/flat
+                        {
                             error(1, s, "triple sharp/flat");
                             i = note.acc > 0 ? 1 : -1;
                             note.pit += i;
@@ -2381,60 +2420,58 @@ static void Main(string[] args)
                         }
                         dpit = note.pit + 19 - apit;
                     }
-                    if (curvoice.tr_snd)
-                        note.midi += curvoice.tr_snd;
+                    if (curvoice.tr_snd != null)
+                        note.midi += curvoice.tr_snd.Value;
 
-                    //fixme: does not work if transposition
-                    if (i)
+                    if (i != 0)
                     {
                         switch (cfmt["writeout-accidentals"][1])
                         {
-                            case 'd':            // added
+                            case 'd':
                                 s2 = curvoice.ckey;
-                                if (!s2.k_a_acc)
-                                    break;
-                                for (n = 0; n < s2.k_a_acc.length; n++)
+                                if (s2.k_a_acc != null)
                                 {
-                                    if ((s2.k_a_acc[n].pit - note.pit)
-                                        % 7 == 0)
+                                    foreach (var item in s2.k_a_acc)
                                     {
-                                        note.acc = i;
-                                        break;
+                                        if ((item.pit - note.pit) % 7 == 0)
+                                        {
+                                            note.acc = i;
+                                            break;
+                                        }
                                     }
                                 }
                                 break;
-                            case 'l':            // all
+                            case 'l':
                                 note.acc = i;
                                 break;
                         }
                     }
 
-                    // starting slurs
-                    if (sl1.length)
+                    if (sl1.Count > 0)
                     {
                         while (true)
                         {
-                            i = sl1.shift();
-                            if (!i)
+                            i = sl1[0];
+                            if (i == 0)
                                 break;
-                            var tu1 = (
-                                ty: i,
-                                    ss: s,
-                                    nts: note    // starting note
-                                );
-                            curvoice.sls.push(tu1);
+                            curvoice.sls.Add(new SlurGroup
+                            {
+                                ty = i,
+                                ss = s,
+                                nts = note
+                            });
+                            sl1.RemoveAt(0);
                         }
                     }
-                    if (a_dcn.length)
+                    if (a_dcn.Count > 0)
                     {
-                        s.time = curvoice.time    // (needed for !tie)!
-                                dh_cnv(s, note);
+                        s.time = curvoice.time;
+                        dh_cnv(s, note);
                     }
-                    s.notes.push(note);
+                    s.notes.Add(note);
                     if (!in_chord)
                         break;
 
-                    // in chord: get the ending slurs and the ties
                     c = line.char();
                     while (true)
                     {
@@ -2449,14 +2486,14 @@ static void Main(string[] args)
                                 note.s = s;
                                 curvoice.tie_s = s;
                                 s.ti1 = true;
-                                if (curvoice.acc[apit]
-                                    || (acc_tie
-                                        && acc_tie[apit]))
+                                if (curvoice.acc[apit] != null
+                                    || (acc_tie != null
+                                        && acc_tie[apit] != null))
                                 {
-                                    if (!curvoice.acc_tie)
-                                        curvoice.acc_tie = [];
-                                    i = curvoice.acc[apit];
-                                    if (acc_tie && acc_tie[apit])
+                                    if (curvoice.acc_tie == null)
+                                        curvoice.acc_tie = new Dictionary<int, int>();
+                                    i = curvoice.acc[apit] ?? 0;
+                                    if (acc_tie != null && acc_tie[apit] != null)
                                         i = acc_tie[apit];
                                     curvoice.acc_tie[apit] = i;
                                 }
@@ -2468,7 +2505,7 @@ static void Main(string[] args)
                                 {
                                     case '-':
                                     case '(':
-                                        a_dcn.push("dot");
+                                        a_dcn.Add("dot");
                                         continue;
                                 }
                                 syntax(1, "Misplaced dot");
@@ -2480,9 +2517,8 @@ static void Main(string[] args)
                     {
                         line.index++;
 
-                        // adjust the chord duration
                         nd = parse_dur(line);
-                        s.nhd = s.notes.length - 1;
+                        s.nhd = s.notes.Count - 1;
                         for (i = 0; i <= s.nhd; i++)
                         {
                             note = s.notes[i];
@@ -2492,27 +2528,24 @@ static void Main(string[] args)
                     }
                 }
 
-                // handle the starting slurs
-                if (sls.length)
+                if (sls.Count > 0)
                 {
                     while (true)
                     {
-                        i = sls.shift();
-                        if (!i)
+                        i = sls[0];
+                        if (i == 0)
                             break;
-                        var tu2 = (
+                        curvoice.sls.Add(new SlurGroup
+                        {
                             ty = i,
-                                ss = s
-                                // no starting note
-                                )
-                            curvoice.sls.push(tu2);
+                            ss = s
+                        });
                         if (grace)
-                            curvoice.sls[curvoice.sls.length - 1].grace =
-                                grace;
+                            curvoice.sls[curvoice.sls.Count - 1].grace = grace;
+                        sls.RemoveAt(0);
                     }
                 }
 
-                // the duration of the chord is the duration of the 1st note
                 s.dur_orig = s.notes[0].dur;
                 s.dur = s.notes[0].dur * curvoice.dur_fact;
                 break;
@@ -2523,20 +2556,25 @@ static void Main(string[] args)
             return null;
         }
 
-        if (s.notes)                // if note or rest
+        if (s.notes != null)
         {
             if (!grace)
             {
                 switch (curvoice.pos.stm & 0x07)
                 {
-                    case C.SL_ABOVE: s.stem = 1; break;
-                    case C.SL_BELOW: s.stem = -1; break;
-                    case C.SL_HIDDEN: s.stemless = true; break;
+                    case C.SL_ABOVE:
+                        s.stem = 1;
+                        break;
+                    case C.SL_BELOW:
+                        s.stem = -1;
+                        break;
+                    case C.SL_HIDDEN:
+                        s.stemless = true;
+                        break;
                 }
 
-                // adjust the symbol duration
                 num = curvoice.brk_rhythm;
-                if (num)
+                if (num != 0)
                 {
                     curvoice.brk_rhythm = 0;
                     s2 = curvoice.last_note;
@@ -2546,8 +2584,7 @@ static void Main(string[] args)
                         s.dur = s.dur * n / num;
                         s.dur_orig = s.dur_orig * n / num;
                         for (i = 0; i <= s.nhd; i++)
-                            s.notes[i].dur =
-                                s.notes[i].dur * n / num;
+                            s.notes[i].dur = s.notes[i].dur * n / num;
                         s2.dur /= num;
                         s2.dur_orig /= num;
                         for (i = 0; i <= s2.nhd; i++)
@@ -2564,31 +2601,28 @@ static void Main(string[] args)
                         s2.dur = s2.dur * n / num;
                         s2.dur_orig = s2.dur_orig * n / num;
                         for (i = 0; i <= s2.nhd; i++)
-                            s2.notes[i].dur =
-                                s2.notes[i].dur * n / num;
+                            s2.notes[i].dur = s2.notes[i].dur * n / num;
                     }
                     curvoice.time = s2.time + s2.dur;
 
-                    // adjust the time of the grace notes, bars...
-                    for (s2 = s2.next; s2; s2 = s2.next)
+                    for (s2 = s2.next; s2 != null; s2 = s2.next)
                         s2.time = curvoice.time;
                 }
             }
             else
-            {        /* grace note - adjust its duration */
+            {
                 div = curvoice.ckey.k_bagpipe ? 8 : 4;
                 for (i = 0; i <= s.nhd; i++)
                     s.notes[i].dur /= div;
                 s.dur /= div;
                 s.dur_orig /= div;
-                if (grace.stem)
+                if (grace.stem != null)
                     s.stem = grace.stem;
             }
 
             curvoice.last_note = s;
 
-            // get the possible ties and end of slurs
-            c = line.char1();
+            c = line.char();
             while (true)
             {
                 switch (c)
@@ -2596,9 +2630,9 @@ static void Main(string[] args)
                     case '.':
                         if (line.buffer[line.index + 1] != '-')
                             break;
-                        a_dcn.push("dot");
+                        a_dcn.Add("dot");
                         line.index++;
-                    // fall thru
+                        goto case '-';
                     case '-':
                         ty = parse_vpos();
                         for (i = 0; i <= s.nhd; i++)
@@ -2606,21 +2640,20 @@ static void Main(string[] args)
                             s.notes[i].tie_ty = ty;
                             s.notes[i].s = s;
                         }
-                        curvoice.tie_s = grace || s;
+                        curvoice.tie_s = grace ?? s;
                         curvoice.tie_s.ti1 = true;
                         for (i = 0; i <= s.nhd; i++)
                         {
                             note = s.notes[i];
-                            apit = note.pit + 19    // pitch from C-1
-                                - dpit        // (if transposition)
-                                    if (curvoice.acc[apit]
-                                        || (acc_tie
-                                            && acc_tie[apit]))
+                            apit = note.pit + 19 - dpit;
+                            if (curvoice.acc[apit] != null
+                                || (acc_tie != null
+                                    && acc_tie[apit] != null))
                             {
-                                if (!curvoice.acc_tie)
-                                    curvoice.acc_tie = [];
-                                n = curvoice.acc[apit];
-                                if (acc_tie && acc_tie[apit])
+                                if (curvoice.acc_tie == null)
+                                    curvoice.acc_tie = new Dictionary<int, int>();
+                                n = curvoice.acc[apit] ?? 0;
+                                if (acc_tie != null && acc_tie[apit] != null)
                                     n = acc_tie[apit];
                                 curvoice.acc_tie[apit] = n;
                             }
@@ -2631,8 +2664,7 @@ static void Main(string[] args)
                 break;
             }
 
-            // handle the ties ending on this chord/note
-            if (tie_s)        // if tie from previous note / grace note
+            if (tie_s != null)
                 do_ties(s, tie_s);
         }
 
@@ -2640,66 +2672,90 @@ static void Main(string[] args)
 
         if (!grace)
         {
-            if (!curvoice.lyric_restart)
+            if (curvoice.lyric_restart == null)
                 curvoice.lyric_restart = s;
-            if (!curvoice.sym_restart)
+            if (curvoice.sym_restart == null)
                 curvoice.sym_restart = s;
         }
 
-        if (a_dcn_sav.length)
+        if (a_dcn_sav.Count > 0)
         {
             a_dcn = a_dcn_sav;
             deco_cnv(s, s.prev);
         }
-        if (grace && s.ottava)
+        if (grace && s.ottava != null)
             grace.ottava = s.ottava;
         if (parse.stemless)
             s.stemless = true;
         s.iend = parse.bol + line.index;
         return s;
     }
-}
 
-
-
-using System;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-
-namespace CodeTranslationAssistant
-{
-    class Program
+        // adjust the duration of the elements in a tuplet
+        public void tp_adj(VoiceItem s, int fact)
     {
-        static void Main(string[] args)
-        {
-            var a_gch = 0;
-            var a_dcn = new List<string>();
-            int multicol;
-            var maps = new Dictionary<string, object>();
+        int d;
+        int tim = s.time.Value;
+        int to = curvoice.time - tim;
+        int tt = to * fact;
 
-            var qplet_tb = new sbyte[] { 0, 1 };
-            var ntb = "CDEab";
-            var reg_dur = new Regex("aawwd");
-            var nil = "0";
-            var char_tb = new string[] { nil, " ", "\n", nil };
-
-            interface Voice
+        curvoice.time = tim + tt;
+        while (true)
         {
-            int[] acc_tie { get; set; }
-            int[] acc { get; set; }
+            s.in_tuplet = true;
+            if (!s.grace)
+            {
+                s.time = tim;
+                if (s.dur != null)
+                {
+                    d = (int)Math.Round(s.dur.Value * tt / to);
+                    to -= s.dur.Value;
+                    s.dur = d;
+                    tt -= s.dur.Value;
+                    tim += s.dur.Value;
+                }
+            }
+            if (s.next == null)
+            {
+                if (s.tpe != null)
+                    s.tpe++;
+                else
+                    s.tpe = 1;
+                break;
+            }
+            s = s.next;
         }
+    }
 
-        Voice curvoice;
+        // get a decoration
+        public void get_deco()
+    {
+        int c;
+        int line = parse.line;
+        int i = line.index;
 
+        string dcn = "";
 
-
-
-
-
-
-        void parse_music_line()
+        while (true)
         {
-            Note grace, last_note_sav;
+            c = line.next_char();
+            if (c == 0)
+            {
+                line.index = i;
+                syntax(1, "No end of decoration");
+                return;
+            }
+            if (c == '!')
+                break;
+            dcn += (char)c;
+        }
+        a_dcn.Add(dcn);
+    }
+
+
+    void parse_music_line()
+        {
+            NoteItem grace, last_note_sav;
             List<string> a_dcn_sav;
             bool no_eol;
             string s, tps;
@@ -2851,7 +2907,7 @@ namespace CodeTranslationAssistant
                 string c;
                 int idx, type, k, s, dcn, i, n;
                 string text;
-                Note note;
+                NoteItem note;
 
                 while (true)
                 {
@@ -3159,7 +3215,7 @@ namespace CodeTranslationAssistant
                             curvoice.last_note = null;
                             a_dcn_sav = a_dcn;
                             a_dcn = new List<string>();
-                            grace = new Note
+                            grace = new NoteItem
                             {
                                 type = C.GRACE,
                                 fname = parse.fname,
@@ -3271,321 +3327,727 @@ namespace CodeTranslationAssistant
             if (curvoice.eoln && cfmt.breakoneoln && curvoice.last_note != null)
                 curvoice.last_note.beam_end = true;
         }
-    }
+        /*************************************************************/
+
+        //var a_gch = new List<object>();
+        //var a_dcn = new List<object>();
+        //object multicol;
+        //var maps = new Dictionary<object, object>();
+        //var qplet_tb = new sbyte[] { 0, 1 };
+        //var ntb = "CDEab";
+        //var reg_dur = new System.Text.RegularExpressions.Regex("aawwd");
+        //var nil = "0";
+        //var char_tb = new object[] { nil, " ", "\n", nil };
+
+
+
+
+
+        /**************************************************************/
+
+
+        //public class VoiceTempo
+        //{
+        //    public string type { get; set; }
+        //    public int dur { get; set; }
+        //}
+
+        //public class VoiceBar
+        //{
+        //    public string type { get; set; }
+        //    public string fname { get; set; }
+        //    public int istart { get; set; }
+        //    public int dur { get; set; }
+        //    public int multi { get; set; }
+        //    public string text { get; set; }
+        //    public int iend { get; set; }
+        //    public bool bar_dotted { get; set; }
+        //    public int rbstop { get; set; }
+        //    public int bar_num { get; set; }
+        //    public bool invis { get; set; }
+        //    public bool norepbra { get; set; }
+        //    public int rbstart { get; set; }
+        //    public int st { get; set; }
+        //    public int xsh { get; set; }
+        //}
+
+        //public class VoicePart
+        //{
+        //    public string type { get; set; }
+        //    public string text { get; set; }
+        //    public int time { get; set; }
+        //    public bool invis { get; set; }
+        //}
+
+        //public class VoiceRemark
+        //{
+        //    public string type { get; set; }
+        //    public string text { get; set; }
+        //    public int dur { get; set; }
+        //}
+
+        //public class VoiceNote
+        //{
+        //    public int pit { get; set; }
+        //    public int shhd { get; set; }
+        //    public int shac { get; set; }
+        //    public int[] acc { get; set; }
+        //}
+
+        //public class Voice
+        //{
+        //    public List<VoiceTempo> tempo_notes { get; set; }
+        //    public string tempo_ca { get; set; }
+        //    public int new_beat { get; set; }
+        //    public int tempo { get; set; }
+        //    public bool invis { get; set; }
+        //    public string tempo_str1 { get; set; }
+        //    public string tempo_str2 { get; set; }
+        //    public string text { get; set; }
+        //    public int time { get; set; }
+        //    public bool ignore { get; set; }
+        //    public bool second { get; set; }
+        //    public bool norepbra { get; set; }
+        //    public int v { get; set; }
+        //    public int ulen { get; set; }
+        //    public int dur_fact { get; set; }
+        //    public List<int> acc_tie { get; set; }
+        //    public List<int> acc_tie_rep { get; set; }
+        //    public VoiceNote tie_s_rep { get; set; }
+        //    public VoiceNote tie_s { get; set; }
+        //    public List<int> acc { get; set; }
+        //    public VoiceBar last_sym { get; set; }
+        //    public VoiceBar lyric_restart { get; set; }
+        //    public VoiceBar sym_restart { get; set; }
+        //    public int st { get; set; }
+        //    public int eoln { get; set; }
+        //    public bool norepbra { get; set; }
+        //    public string bar_type { get; set; }
+        //    public int rbstop { get; set; }
+        //    public int rbstart { get; set; }
+        //    public bool bar_dotted { get; set; }
+        //    public bool invis { get; set; }
+        //    public bool norepbra { get; set; }
+        //    public int xsh { get; set; }
+        //    public int[] acc { get; set; }
+        //    public int pit { get; set; }
+        //    public int shhd { get; set; }
+        //    public int shac { get; set; }
+        //}
+
+
+    //    public class ParSy
+    //    {
+    //        public List<Voice> voices { get; set; }
+    //        public List<Staff> staves { get; set; }
+    //    }
+
+
+    //    public class Info
+    //    {
+    //        public string Q { get; set; }
+    //        public string P { get; set; }
+    //        public string N { get; set; }
+    //        public string R { get; set; }
+    //    }
+
+    //    public class Glovar
+    //    {
+    //        public Voice tempo { get; set; }
+    //        public int new_nbar { get; set; }
+    //        public int ulen { get; set; }
+    //    }
+
+    //    public class Line
+    //    {
+    //        public string buffer { get; set; }
+    //        public int index { get; set; }
+
+    //        public char char1()
+    //        {
+    //            return buffer[index];
+    //        }
+
+    //        public char next_char()
+    //        {
+    //            return buffer[++index];
+    //        }
+    //    }
+
+    //        private static Regex reg_dur = new Regex(@"(\d+)\/(\d+)");
+    //        private static string ntb = "CDEab";
+    //        private static Info info = new Info();
+    //        private static Glovar glovar = new Glovar();
+    //        private static ParSy par_sy = new ParSy();
+    //        private static Parse parse = new Parse();
+    //        private static Voice curvoice = new Voice();
+    //        private static int C_BLEN = 0;
+
+    //        int a_gch = 0;
+    //        int[] a_dcn = new List<int>();
+    //        int multicol = 0;
+    //        Dictionary<string, int> maps = new Dictionary<string, int>();
+    //        int[] qplet_tb = new int[] { 0, 1 };
+    //        string ntb = "CDEab";
+    //        var reg_dur = new Regex(@"aawwd");
+
+    //        List<string> char_tb = new List<string> { null, " ", "\n", null };
+
+
+
+
+
+
+
+
+
+
+    //    int[] new_note(int grace, int sls)
+    //    {
+    //        int note, s, in_chord, c, dcn, type, tie_s, acc_tie;
+    //        int i, n, s2, nd, res, num, dur, apit, div, ty;
+    //        int dpit = 0;
+    //        List<int> sl1 = new List<int>();
+    //        int line = parse.line;
+    //        List<int> a_dcn_sav = a_dcn;        // save parsed decoration names
+
+    //        a_dcn = new List<int>();
+    //        parse.stemless = false;
+    //        s = new
+    //        {
+    //            type = C.NOTE,
+    //            fname = parse.fname,
+    //            stem = 0,
+    //            multi = 0,
+    //            nhd = 0,
+    //            xmx = 0
+    //        };
+    //        s.istart = parse.bol + line.index;
+
+    //        if (curvoice.color)
+    //            s.color = curvoice.color;
+
+    //        if (grace)
+    //        {
+    //            s.grace = true;
+    //        }
+    //        else
+    //        {
+    //            if (curvoice.tie_s)
+    //            {    // if tie from previous note / grace note
+    //                tie_s = curvoice.tie_s;
+    //                curvoice.tie_s = null;
+    //            }
+    //            if (a_gch)
+    //                csan_add(s);
+    //            if (parse.repeat_n)
+    //            {
+    //                s.repeat_n = parse.repeat_n;
+    //                s.repeat_k = parse.repeat_k;
+    //                parse.repeat_n = 0;
+    //            }
+    //        }
+    //        c = line.char1();
+    //        switch (c)
+    //        {
+    //            case 'X':
+    //                s.invis = true;
+    //            case 'Z':
+    //                s.type = C.MREST;
+    //                c = line.next_char();
+    //                s.nmes = (c > '0' && c <= '9') ? line.get_int() : 1;
+    //                if (curvoice.wmeasure == 1)
+    //                {
+    //                    error(1, s, "multi-measure rest, but no measure!");
+    //                    return null;
+    //                }
+    //                s.dur = curvoice.wmeasure * s.nmes;
+
+    //                // ignore if in second voice
+    //                if (curvoice.second)
+    //                {
+    //                    delete curvoice.eoln;    // ignore the end of line
+    //                    curvoice.time += s.dur;
+    //                    return null;
+    //                }
+
+    //                // convert 'Z'/'Z1' to a whole measure rest
+    //                if (s.nmes == 1)
+    //                {
+    //                    s.type = C.REST;
+    //                    s.dur_orig = s.dur;
+    //                    s.fmr = 1;        // full measure rest
+    //                    s.notes = new int[] {
+    //                            pit = 18,
+    //                            dur = s.dur
+    //                        };
+    //                }
+    //                else
+    //                {
+    //                    glovar.mrest_p = true;
+    //                    if (par_sy.voices.length == 1)
+    //                    {
+    //                        s.tacet = curvoice.tacet;
+    //                        delete s.invis;    // show the 'H' when 'Xn'
+    //                    }
+    //                }
+    //                break;
+    //            case 'y':
+    //                s.type = C.SPACE;
+    //                s.invis = true;
+    //                s.dur = 0;
+    //                c = line.next_char();
+    //                if (c >= '0' && c <= '9')
+    //                    s.width = line.get_int();
+    //                else
+    //                    s.width = 10;
+    //                if (tie_s)
+    //                {
+    //                    curvoice.tie_s = tie_s;
+    //                    tie_s = null;
+    //                }
+    //                break;
+    //            case 'x':
+    //                s.invis = true;
+    //            case 'z':
+    //                s.type = C.REST;
+    //                line.index++;
+    //                nd = parse_dur(line);
+    //                s.dur_orig = ((curvoice.ulen < 0) ?
+    //                    C.BLEN :
+    //                    curvoice.ulen) * nd[0] / nd[1];
+    //                s.dur = s.dur_orig * curvoice.dur_fact;
+    //                if (s.dur == curvoice.wmeasure)
+    //                    s.fmr = 1;        // full measure rest
+    //                s.notes = new int[] {
+    //                        pit = 18,
+    //                        dur = s.dur_orig
+    //                    };
+    //                break;
+    //            case '[':            // chord
+    //                in_chord = true;
+    //                c = line.next_char();
+    //            // fall thru
+    //            default:            // accidental, chord, note
+    //                if (curvoice.acc_tie)
+    //                {
+    //                    acc_tie = curvoice.acc_tie;
+    //                    curvoice.acc_tie = null;
+    //                }
+    //                s.notes = new List<int>();
+
+    //                // loop on the chord
+    //                while (true)
+    //                {
+
+    //                    // when in chord, get the slurs and decorations
+    //                    if (in_chord)
+    //                    {
+    //                        while (true)
+    //                        {
+    //                            if (!c)
+    //                                break;
+    //                            i = c.charCodeAt(0);
+    //                            if (i >= 128)
+    //                            {
+    //                                syntax(1, errs.not_ascii);
+    //                                return null;
+    //                            }
+    //                            type = char_tb[i];
+    //                            switch (type[0])
+    //                            {
+    //                                case '(':
+    //                                    sl1.push(parse_vpos());
+    //                                    c = line.char();
+    //                                    continue;
+    //                                case '!':
+    //                                    if (type.length > 1)
+    //                                        a_dcn.push(type.slice(1, -1));
+    //                                    else
+    //                                        get_deco();    // line -> a_dcn
+    //                                    c = line.next_char();
+    //                                    continue;
+    //                            }
+    //                            break;
+    //                        }
+    //                    }
+    //                    note = parse_basic_note(line,
+    //                        s.grace ? C.BLEN / 4 :
+    //                            curvoice.ulen < 0 ?
+    //                                C.BLEN :
+    //                                curvoice.ulen);
+    //                    if (!note)
+    //                        return null;
+
+    //                    if (curvoice.octave)
+    //                        note.pit += curvoice.octave * 7;
+
+    //                    // get the real accidental
+    //                    apit = note.pit + 19        // pitch from C-1
+    //                        i = note.acc;
+    //                    if (!i)
+    //                    {
+    //                        if (cfmt["propagate-accidentals"][0] == 'p')
+    //                            i = curvoice.acc[apit % 7];
+    //                        else
+    //                            i = curvoice.acc[apit];
+    //                        if (!i)
+    //                            i = curvoice.ckey.k_map[apit % 7] || 0;
+    //                    }
+
+    //                    if (i)
+    //                    {
+    //                        if (cfmt["propagate-accidentals"][0] == 'p')
+    //                            curvoice.acc[apit % 7] = i;
+    //                        else if (cfmt["propagate-accidentals"][0] != 'n')
+    //                            curvoice.acc[apit] = i;
+    //                    }
+
+    //                    if (acc_tie && acc_tie[apit])
+    //                        i = acc_tie[apit];    // tied note
+
+    //                    // map
+    //                    if (curvoice.map
+    //                        && maps[curvoice.map])
+    //                        set_map(note, i);
+
+    //                    // set the MIDI pitch
+    //                    if (!note.midi)        // if not map play
+    //                        note.midi = pit2mid(apit, i);
+
+    //                    // transpose
+    //                    if (curvoice.tr_sco
+    //                        && !note.notrp)
+    //                    {
+    //                        i = nt_trans(note, i);
+    //                        if (i == -3)
+    //                        {        // if triple sharp/flat
+    //                            error(1, s, "triple sharp/flat");
+    //                            i = note.acc > 0 ? 1 : -1;
+    //                            note.pit += i;
+    //                            note.acc = i;
+    //                        }
+    //                        dpit = note.pit + 19 - apit;
+    //                    }
+    //                    if (curvoice.tr_snd)
+    //                        note.midi += curvoice.tr_snd;
+
+    //                    //fixme: does not work if transposition
+    //                    if (i)
+    //                    {
+    //                        switch (cfmt["writeout-accidentals"][1])
+    //                        {
+    //                            case 'd':            // added
+    //                                s2 = curvoice.ckey;
+    //                                if (!s2.k_a_acc)
+    //                                    break;
+    //                                for (n = 0; n < s2.k_a_acc.length; n++)
+    //                                {
+    //                                    if ((s2.k_a_acc[n].pit - note.pit)
+    //                                        % 7 == 0)
+    //                                    {
+    //                                        note.acc = i;
+    //                                        break;
+    //                                    }
+    //                                }
+    //                                break;
+    //                            case 'l':            // all
+    //                                note.acc = i;
+    //                                break;
+    //                        }
+    //                    }
+
+    //                    // starting slurs
+    //                    if (sl1.length)
+    //                    {
+    //                        while (true)
+    //                        {
+    //                            i = sl1.shift();
+    //                            if (!i)
+    //                                break;
+    //                            var tu1 = (
+    //                                ty: i,
+    //                                    ss: s,
+    //                                    nts: note    // starting note
+    //                                );
+    //                            curvoice.sls.push(tu1);
+    //                        }
+    //                    }
+    //                    if (a_dcn.length)
+    //                    {
+    //                        s.time = curvoice.time    // (needed for !tie)!
+    //                            dh_cnv(s, note);
+    //                    }
+    //                    s.notes.push(note);
+    //                    if (!in_chord)
+    //                        break;
+
+    //                    // in chord: get the ending slurs and the ties
+    //                    c = line.char();
+    //                    while (true)
+    //                    {
+    //                        switch (c)
+    //                        {
+    //                            case ')':
+    //                                slur_add(s, note);
+    //                                c = line.next_char();
+    //                                continue;
+    //                            case '-':
+    //                                note.tie_ty = parse_vpos();
+    //                                note.s = s;
+    //                                curvoice.tie_s = s;
+    //                                s.ti1 = true;
+    //                                if (curvoice.acc[apit]
+    //                                    || (acc_tie
+    //                                        && acc_tie[apit]))
+    //                                {
+    //                                    if (!curvoice.acc_tie)
+    //                                        curvoice.acc_tie = [];
+    //                                    i = curvoice.acc[apit];
+    //                                    if (acc_tie && acc_tie[apit])
+    //                                        i = acc_tie[apit];
+    //                                    curvoice.acc_tie[apit] = i;
+    //                                }
+    //                                c = line.char();
+    //                                continue;
+    //                            case '.':
+    //                                c = line.next_char();
+    //                                switch (c)
+    //                                {
+    //                                    case '-':
+    //                                    case '(':
+    //                                        a_dcn.push("dot");
+    //                                        continue;
+    //                                }
+    //                                syntax(1, "Misplaced dot");
+    //                                break;
+    //                        }
+    //                        break;
+    //                    }
+    //                    if (c == ']')
+    //                    {
+    //                        line.index++;
+
+    //                        // adjust the chord duration
+    //                        nd = parse_dur(line);
+    //                        s.nhd = s.notes.length - 1;
+    //                        for (i = 0; i <= s.nhd; i++)
+    //                        {
+    //                            note = s.notes[i];
+    //                            note.dur = note.dur * nd[0] / nd[1];
+    //                        }
+    //                        break;
+    //                    }
+    //                }
+
+    //                // handle the starting slurs
+    //                if (sls.length)
+    //                {
+    //                    while (true)
+    //                    {
+    //                        i = sls.shift();
+    //                        if (!i)
+    //                            break;
+    //                        var tu2 = (
+    //                            ty = i,
+    //                                ss = s
+    //                                // no starting note
+    //                                )
+    //                            curvoice.sls.push(tu2);
+    //                        if (grace)
+    //                            curvoice.sls[curvoice.sls.length - 1].grace =
+    //                                grace;
+    //                    }
+    //                }
+
+    //                // the duration of the chord is the duration of the 1st note
+    //                s.dur_orig = s.notes[0].dur;
+    //                s.dur = s.notes[0].dur * curvoice.dur_fact;
+    //                break;
+    //        }
+    //        if (s.grace && s.type != C.NOTE)
+    //        {
+    //            syntax(1, errs.bad_grace);
+    //            return null;
+    //        }
+
+    //        if (s.notes)                // if note or rest
+    //        {
+    //            if (!grace)
+    //            {
+    //                switch (curvoice.pos.stm & 0x07)
+    //                {
+    //                    case C.SL_ABOVE: s.stem = 1; break;
+    //                    case C.SL_BELOW: s.stem = -1; break;
+    //                    case C.SL_HIDDEN: s.stemless = true; break;
+    //                }
+
+    //                // adjust the symbol duration
+    //                num = curvoice.brk_rhythm;
+    //                if (num)
+    //                {
+    //                    curvoice.brk_rhythm = 0;
+    //                    s2 = curvoice.last_note;
+    //                    if (num > 0)
+    //                    {
+    //                        n = num * 2 - 1;
+    //                        s.dur = s.dur * n / num;
+    //                        s.dur_orig = s.dur_orig * n / num;
+    //                        for (i = 0; i <= s.nhd; i++)
+    //                            s.notes[i].dur =
+    //                                s.notes[i].dur * n / num;
+    //                        s2.dur /= num;
+    //                        s2.dur_orig /= num;
+    //                        for (i = 0; i <= s2.nhd; i++)
+    //                            s2.notes[i].dur /= num;
+    //                    }
+    //                    else
+    //                    {
+    //                        num = -num;
+    //                        n = num * 2 - 1;
+    //                        s.dur /= num;
+    //                        s.dur_orig /= num;
+    //                        for (i = 0; i <= s.nhd; i++)
+    //                            s.notes[i].dur /= num;
+    //                        s2.dur = s2.dur * n / num;
+    //                        s2.dur_orig = s2.dur_orig * n / num;
+    //                        for (i = 0; i <= s2.nhd; i++)
+    //                            s2.notes[i].dur =
+    //                                s2.notes[i].dur * n / num;
+    //                    }
+    //                    curvoice.time = s2.time + s2.dur;
+
+    //                    // adjust the time of the grace notes, bars...
+    //                    for (s2 = s2.next; s2; s2 = s2.next)
+    //                        s2.time = curvoice.time;
+    //                }
+    //            }
+    //            else
+    //            {        /* grace note - adjust its duration */
+    //                div = curvoice.ckey.k_bagpipe ? 8 : 4;
+    //                for (i = 0; i <= s.nhd; i++)
+    //                    s.notes[i].dur /= div;
+    //                s.dur /= div;
+    //                s.dur_orig /= div;
+    //                if (grace.stem)
+    //                    s.stem = grace.stem;
+    //            }
+
+    //            curvoice.last_note = s;
+
+    //            // get the possible ties and end of slurs
+    //            c = line.char1();
+    //            while (true)
+    //            {
+    //                switch (c)
+    //                {
+    //                    case '.':
+    //                        if (line.buffer[line.index + 1] != '-')
+    //                            break;
+    //                        a_dcn.push("dot");
+    //                        line.index++;
+    //                    // fall thru
+    //                    case '-':
+    //                        ty = parse_vpos();
+    //                        for (i = 0; i <= s.nhd; i++)
+    //                        {
+    //                            s.notes[i].tie_ty = ty;
+    //                            s.notes[i].s = s;
+    //                        }
+    //                        curvoice.tie_s = grace || s;
+    //                        curvoice.tie_s.ti1 = true;
+    //                        for (i = 0; i <= s.nhd; i++)
+    //                        {
+    //                            note = s.notes[i];
+    //                            apit = note.pit + 19    // pitch from C-1
+    //                                - dpit        // (if transposition)
+    //                                if (curvoice.acc[apit]
+    //                                    || (acc_tie
+    //                                        && acc_tie[apit]))
+    //                            {
+    //                                if (!curvoice.acc_tie)
+    //                                    curvoice.acc_tie = [];
+    //                                n = curvoice.acc[apit];
+    //                                if (acc_tie && acc_tie[apit])
+    //                                    n = acc_tie[apit];
+    //                                curvoice.acc_tie[apit] = n;
+    //                            }
+    //                        }
+    //                        c = line.char();
+    //                        continue;
+    //                }
+    //                break;
+    //            }
+
+    //            // handle the ties ending on this chord/note
+    //            if (tie_s)        // if tie from previous note / grace note
+    //                do_ties(s, tie_s);
+    //        }
+
+    //        sym_link(s);
+
+    //        if (!grace)
+    //        {
+    //            if (!curvoice.lyric_restart)
+    //                curvoice.lyric_restart = s;
+    //            if (!curvoice.sym_restart)
+    //                curvoice.sym_restart = s;
+    //        }
+
+    //        if (a_dcn_sav.length)
+    //        {
+    //            a_dcn = a_dcn_sav;
+    //            deco_cnv(s, s.prev);
+    //        }
+    //        if (grace && s.ottava)
+    //            grace.ottava = s.ottava;
+    //        if (parse.stemless)
+    //            s.stemless = true;
+    //        s.iend = parse.bol + line.index;
+    //        return s;
+    //    }
+    //}
+
+
+
+
+
+
+
+
+
+
+
+    //static List<object> a_dcn = new List<object>();
+    //static bool multicol;
+    //static Dictionary<string, object> maps = new Dictionary<string, object>();
+    //static sbyte[] qplet_tb = new sbyte[] { 0, 1 };
+    //static string ntb = "CDEab";
+    //static Regex reg_dur = new Regex("aawwd");
+    //static string nil = "0";
+    //static string[] char_tb = new string[] { nil, " ", "\n", nil };
+
+    //interface IVoice
+    //{
+    //    int[] acc_tie { get; set; }
+    //    int[] acc { get; set; }
+    //}
+
+    //class Voice : IVoice
+    //{
+    //    public int[] acc_tie { get; set; }
+    //    public int[] acc { get; set; }
+    //    public List<SlurGroup> sls { get; set; } = new List<SlurGroup>();
+    //    public int time { get; set; }
+    //    public int snd_oct { get; set; }
+    //}
+
+
+
+ 
+
+
 }
-}
-
-
-
-using System;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-
-class Program
-{
-    static List<object> a_dcn = new List<object>();
-    static bool multicol;
-    static Dictionary<string, object> maps = new Dictionary<string, object>();
-    static sbyte[] qplet_tb = new sbyte[] { 0, 1 };
-    static string ntb = "CDEab";
-    static Regex reg_dur = new Regex("aawwd");
-    static string nil = "0";
-    static string[] char_tb = new string[] { nil, " ", "\n", nil };
-
-    interface IVoice
-    {
-        int[] acc_tie { get; set; }
-        int[] acc { get; set; }
-    }
-
-    class Voice : IVoice
-    {
-        public int[] acc_tie { get; set; }
-        public int[] acc { get; set; }
-        public List<Slur> sls { get; set; } = new List<Slur>();
-        public int time { get; set; }
-        public int snd_oct { get; set; }
-    }
-
-    class Slur
-    {
-        public object ss { get; set; }
-        public object se { get; set; }
-        public object nte { get; set; }
-        public bool grace { get; set; }
-        public string ty { get; set; }
-        public string loc { get; set; }
-    }
-
-    static Voice curvoice = new Voice();
-
-    static void SlurAdd(object s, object nt = null)
-    {
-        int i;
-        object s2;
-        Slur sl;
-
-        for (i = curvoice.sls.Count - 1; i >= 0; i--)
-        {
-            sl = curvoice.sls[i];
-
-            if (sl.ss == s)
-                continue;
-
-            curvoice.sls.RemoveAt(i);
-            sl.se = s;
-            if (nt != null)
-                sl.nte = nt;
-            s2 = sl.ss;
-            if (s2.GetType().GetProperty("sls") == null)
-                s2.GetType().GetProperty("sls").SetValue(s2, new List<Slur>());
-            ((List<Slur>)s2.GetType().GetProperty("sls").GetValue(s2)).Add(sl);
-
-            if (sl.grace)
-                sl.grace.GetType().GetProperty("sl1").SetValue(sl.grace, true);
-            return;
-        }
-
-        for (s2 = s.GetType().GetProperty("prev").GetValue(s); s2 != null; s2 = s2.GetType().GetProperty("prev").GetValue(s2))
-        {
-            if (s2.GetType().GetProperty("type").GetValue(s2).Equals("BAR") &&
-                s2.GetType().GetProperty("bar_type").GetValue(s2).ToString()[0] == ':' &&
-                s2.GetType().GetProperty("text").GetValue(s2) != null)
-            {
-                if (s2.GetType().GetProperty("sls") == null)
-                    s2.GetType().GetProperty("sls").SetValue(s2, new List<Slur>());
-                ((List<Slur>)s2.GetType().GetProperty("sls").GetValue(s2)).Add(new Slur
-                {
-                    ty = "SL_AUTO",
-                    ss = s2,
-                    se = s
-                });
-                if (nt != null)
-                    ((List<Slur>)s2.GetType().GetProperty("sls").GetValue(s2)).Last().nte = nt;
-                return;
-            }
-        }
-
-        if (s.GetType().GetProperty("sls") == null)
-            s.GetType().GetProperty("sls").SetValue(s, new List<Slur>());
-        ((List<Slur>)s.GetType().GetProperty("sls").GetValue(s)).Add(new Slur
-        {
-            ty = "SL_AUTO",
-            se = s,
-            loc = "i"
-        });
-        if (nt != null)
-            ((List<Slur>)s.GetType().GetProperty("sls").GetValue(s)).Last().nte = nt;
-    }
-
-    static double Pit2Mid(int pit, object acc)
-    {
-        int[] pArray = { 0, 2, 4, 5, 7, 9, 11 };
-        int p = pArray[pit % 7];
-        int o = (pit / 7) * 12;
-        double s = 0;
-        int b40;
-
-        if (curvoice.snd_oct != 0)
-            o += curvoice.snd_oct;
-        if (acc.Equals(3))
-            acc = 0;
-        if (acc != null)
-        {
-            if (acc is int[])
-            {
-                int[] accArray = (int[])acc;
-                s = (double)accArray[0] / accArray[1];
-                if (accArray[1] == 100)
-                    return p + o + s;
-            }
-            else
-            {
-                s = Convert.ToDouble(acc);
-            }
-        }
-        else
-        {
-            if (cfmt.temper != null)
-                return cfmt.temper[abc2svg.p_b40[pit % 7]] + o;
-            return p + o;
-        }
-        if (!cfmt.nedo)
-        {
-            if (cfmt.temper == null)
-            {
-                p += o + s;
-                return p;
-            }
-        }
-        else
-        {
-            if (!(acc is int[]))
-            {
-                b40 = abc2svg.p_b40[pit % 7] + Convert.ToInt32(acc);
-                return cfmt.temper[b40] + o;
-            }
-
-            int[] accArray = (int[])acc;
-            if (accArray[1] == cfmt.nedo)
-            {
-                b40 = abc2svg.p_b40[pit % 7];
-                return cfmt.temper[b40] + o + s;
-            }
-        }
-
-        double p0 = cfmt.temper[abc2svg.p_b40[pit % 7]];
-        double p1;
-        if (s > 0)
-        {
-            p1 = cfmt.temper[(abc2svg.p_b40[pit % 7] + 1) % 40];
-            if (p1 < p0)
-                p1 += 12;
-        }
-        else
-        {
-            p1 = cfmt.temper[(abc2svg.p_b40[pit % 7] + 39) % 40];
-            if (p1 > p0)
-                p1 -= 12;
-            s = -s;
-        }
-        return p0 + o + (p1 - p0) * s;
-    }
-
-    static void DoTies(object s, object tie_s)
-    {
-        int i, m, nt = 0;
-        object not1, not2, mid, g;
-        bool se = (tie_s.GetType().GetProperty("time").GetValue(tie_s) + tie_s.GetType().GetProperty("dur").GetValue(tie_s)).Equals(curvoice.time);
-
-        for (m = 0; m <= (int)s.GetType().GetProperty("nhd").GetValue(s); m++)
-        {
-            not2 = ((List<object>)s.GetType().GetProperty("notes").GetValue(s))[m];
-            mid = not2.GetType().GetProperty("midi").GetValue(not2);
-            if (!tie_s.GetType().GetProperty("type").GetValue(tie_s).Equals("GRACE"))
-            {
-                for (i = 0; i <= (int)tie_s.GetType().GetProperty("nhd").GetValue(tie_s); i++)
-                {
-                    not1 = ((List<object>)tie_s.GetType().GetProperty("notes").GetValue(tie_s))[i];
-                    if (not1.GetType().GetProperty("tie_ty").GetValue(not1) == null)
-                        continue;
-                    if (not1.GetType().GetProperty("midi").GetValue(not1).Equals(mid) &&
-                        (!se || not1.GetType().GetProperty("tie_e").GetValue(not1) == null))
-                    {
-                        not2.GetType().GetProperty("tie_s").SetValue(not2, not1);
-                        not2.GetType().GetProperty("s").SetValue(not2, s);
-                        if (se)
-                        {
-                            not1.GetType().GetProperty("tie_e").SetValue(not1, not2);
-                            not1.GetType().GetProperty("s").SetValue(not1, tie_s);
-                        }
-                        nt++;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                for (g = tie_s.GetType().GetProperty("extra").GetValue(tie_s); g != null; g = g.GetType().GetProperty("next").GetValue(g))
-                {
-                    not1 = ((List<object>)g.GetType().GetProperty("notes").GetValue(g))[0];
-                    if (not1.GetType().GetProperty("tie_ty").GetValue(not1) == null)
-                        continue;
-                    if (not1.GetType().GetProperty("midi").GetValue(not1).Equals(mid))
-                    {
-                        g.GetType().GetProperty("ti1").SetValue(g, true);
-                        not2.GetType().GetProperty("tie_s").SetValue(not2, not1);
-                        not2.GetType().GetProperty("s").SetValue(not2, s);
-                        not1.GetType().GetProperty("tie_e").SetValue(not1, not2);
-                        not1.GetType().GetProperty("s").SetValue(not1, g);
-                        nt++;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (nt == 0)
-            throw new Exception("Bad tie");
-        else
-            s.GetType().GetProperty("ti2").SetValue(s, true);
-    }
-
-    static void TpAdj(object s, double fact)
-    {
-        double d;
-        int tim = (int)s.GetType().GetProperty("time").GetValue(s);
-        double to = curvoice.time - tim;
-        double tt = to * fact;
-
-        curvoice.time = tim + tt;
-        while (true)
-        {
-            s.GetType().GetProperty("in_tuplet").SetValue(s, true);
-            if (s.GetType().GetProperty("grace").GetValue(s) == null)
-            {
-                s.GetType().GetProperty("time").SetValue(s, tim);
-                if (s.GetType().GetProperty("dur").GetValue(s) != null)
-                {
-                    d = Math.Round((double)s.GetType().GetProperty("dur").GetValue(s) * tt / to);
-                    to -= (double)s.GetType().GetProperty("dur").GetValue(s);
-                    s.GetType().GetProperty("dur").SetValue(s, d);
-                    tt -= (double)s.GetType().GetProperty("dur").GetValue(s);
-                    tim += (int)s.GetType().GetProperty("dur").GetValue(s);
-                }
-            }
-            if (s.GetType().GetProperty("next").GetValue(s) == null)
-            {
-                if (s.GetType().GetProperty("tpe").GetValue(s) != null)
-                    s.GetType().GetProperty("tpe").SetValue(s, (int)s.GetType().GetProperty("tpe").GetValue(s) + 1);
-                else
-                    s.GetType().GetProperty("tpe").SetValue(s, 1);
-                break;
-            }
-            s = s.GetType().GetProperty("next").GetValue(s);
-        }
-    }
-
-    static void GetDeco()
-    {
-        char c;
-        string line = parse.line;
-        int i = line.IndexOf('!'); // in case no deco end
-        string dcn = "";
-
-        while (true)
-        {
-            c = line[i];
-            if (c == '\0')
-            {
-                line = line.Substring(0, i);
-                throw new Exception("No end of decoration");
-            }
-            if (c == '!')
-                break;
-            dcn += c;
-        }
-        a_dcn.Add(dcn);
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 }

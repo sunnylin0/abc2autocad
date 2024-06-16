@@ -5,7 +5,7 @@
     font_st?: {};	// font style => font_tb index for incomplete user fonts
 
     mhooks?: [];
-    sheet?:any;
+    sheet?: any;
     ft_re?: RegExp;
     rat?(n, d)
     pitcmp?(n1, n2)
@@ -155,7 +155,7 @@ declare interface Parse {
     tp?
     tps?
     tpn?
-    bol?
+    bol?: number
     stemless?: boolean;
     ufmt?: boolean
     tune_v_opts?: {}
@@ -203,7 +203,7 @@ declare interface PageVoiceTune {
     staffnonote?: number;
     clef?: voiceClef
     acc?: [];
-    sls?: [];
+    sls?: SlurGroup[];
     hy_st?: number;
     cst?: number;
     st?: number;
@@ -219,11 +219,11 @@ declare interface PageVoiceTune {
     lyric_restart?: voiceItem;
     sym_restart?: voiceItem;
     tie_s_rep?;
+    tie_s?;
     have_ly?: boolean;
     lyric_start?: voiceItem;
     lyric_line?: number;
     lyric_cont?: voiceItem;
-    tie_s?;
     key?: {
         type?: number;
         dur?: number;
@@ -443,6 +443,53 @@ declare interface gchordItem { // 合弦
     font?: Font;
 }
 
+declare interface Staff {
+    flags?: number;
+    top?: number[];
+    bot?: number[];
+    topbar?: number;
+    botbar?: number;
+    hll?: number;
+    hlmap?: number[];
+    hlu?: number[];
+    hld?: number[];
+    stafflines?: string;
+    scale_str?: string;
+    botline?: number;
+    y?: number;
+    ann_top?: number;
+    ann_bot?: number;
+    staffscale?: number;
+    staffnonote?: number;
+}
+
+
+declare interface BeamItem {
+    a?: number;
+    b?: number;
+    s1?: voiceItem;
+    s2?: voiceItem;
+    nflags?: number;
+}
+
+
+
+declare interface GlyphsMFont {
+    x?: number;
+    y?: number;
+    sc?: number;
+    c?: string;
+}
+
+declare interface SlurGroup {
+    ty?: number;
+    ss?: voiceItem;
+    se?: voiceItem;
+    nte?: object;
+    grace?: boolean;
+    loc?: string;
+}
+
 declare interface voiceBase {
     type?: number;
     v?: number;
@@ -576,11 +623,7 @@ declare interface voiceNote extends voiceBase {
     stemless?: boolean; // 音符是否無莖的
     shrink?: number;
     space?: number;
-    sls?: {
-        ty: number
-        ss: voiceItem
-        se:voiceItem
-    }[]
+    sls?: SlurGroup[];
     slurStart: number[];
     slurEnd: number[];
     soln?: boolean;     //換行 一行結束
@@ -698,7 +741,7 @@ declare interface voiceBlock extends voiceBase {
 }
 
 declare type voiceItem = voiceBar | voiceClef | voiceKey | voiceMeter | voiceNote | voiceRest | voiceTempo | voiceBlock
-type asdf =`{
+type asdf = `{
     mtr : " "
     brace: ""
     lphr: ""
@@ -834,4 +877,4 @@ type asdf =`{
 
 
 
- 
+

@@ -67,8 +67,8 @@ function b_pos(grace, stem, nflags, b) {
 }
 
 /* duplicate a note for beaming continuation */
-function sym_dup(s) {
-    var m, note
+function sym_dup(s: voiceItem) {
+    var m, note: noteItem
 
     s = clone(s)
     s.invis = true
@@ -97,9 +97,11 @@ var min_tb = [
 
 // (possible hook)
 /* じ计11903 */
-Abc.prototype.calculate_beam = function (bm, s1) {
-    var s, s2, g, notes, nflags, st, v, two_staves, two_dir,
-        x, y, ys, a, b, stem_err, max_stem_err,
+Abc.prototype.calculate_beam = function (bm, s1: voiceItem) {
+    var s: voiceItem, s2: voiceItem;
+    var notes;
+    var g, nflags, st, v, two_staves, two_dir;
+    var x, y, ys, a, b, stem_err, max_stem_err,
         p_min, p_max, s_closest,
         stem_xoff, scale,
         visible, dy
@@ -460,11 +462,12 @@ Abc.prototype.calculate_beam = function (bm, s1) {
 /* -- draw the beams for one word -- */
 /* (the staves are defined) */
 /* じ计5362 */
-function draw_beams(bm) {
-    var s, i, beam_dir, shift, bshift, bstub, bh, da, bd,
-        k, k1, k2, x1,
-        s1 = bm.s1,
-        s2 = bm.s2
+function draw_beams(bm: BeamItem) {
+    var s: voiceItem
+    var s1: voiceItem = bm.s1,
+        s2: voiceItem = bm.s2
+    var i, beam_dir, shift, bshift, bstub, bh, da, bd,
+        k, k1, k2, x1;
 
     /* -- draw a single beam -- */
     function draw_beam(x1, x2, dy, h, bm,
@@ -715,7 +718,7 @@ function draw_lstaff(x) {
 
 /* -- draw the time signature -- */
 /* じ计801 */
-function draw_meter(s) {
+function draw_meter(s: voiceItem) {
     if (!s.a_meter)
         return
     var dx, i, j, meter, x,
@@ -770,7 +773,7 @@ function draw_acc(x, y, a) {
 
 // memorize the helper/ledger lines
 /* じ计596 */
-function set_hl(p_st, n, x, dx1, dx2) {
+function set_hl(p_st:Staff, n, x, dx1, dx2) {
     var i, hl
 
     if (n >= 0) {
@@ -802,7 +805,7 @@ function set_hl(p_st, n, x, dx1, dx2) {
 // draw helper lines
 // (possible hook)
 /* じ计1879 */
-Abc.prototype.draw_hl = function (s) {
+Abc.prototype.draw_hl = function (s: voiceItem) {
     var i, j, n, note,
         hla = [],
         st = s.st,
@@ -884,7 +887,7 @@ var sharp_cl = new Int8Array([24, 9, 15, 21, 6, 12, 18]),
     flat2 = new Int8Array([-12, 9, -12, 9, -12, 9])
 
 /* じ计5192 */
-Abc.prototype.draw_keysig = function (x, s) {
+Abc.prototype.draw_keysig = function (x, s: voiceItem) {
     var old_sf = s.k_old_sf,
         st = s.st,
         staffb = staff_tb[st].y,
@@ -1072,7 +1075,7 @@ function nrep_out(x, y, n) {
 // if rest alone in the measure or measure repeat,
 // change the head and center
 /* じ计618 */
-function center_rest(s) {
+function center_rest(s: voiceItem) {
     var s2, x
 
     if (s.dur < C.BLEN * 2)
@@ -1109,8 +1112,9 @@ var rest_tb = [
     "r2", "r1", "r0", "r00"]
 
 /* じ计1469 */
-function draw_rest(s) {
-    var s2, i, j, y, bx,
+function draw_rest(s: voiceItem) {
+    var s2: voiceItem
+    var i, j, y, bx,
         p_staff = staff_tb[s.st],
         yb = p_staff.y,			// bottom of staff
         x = s.x
@@ -1172,7 +1176,7 @@ function draw_rest(s) {
 // -- draw a multi-measure rest --
 // (the staves are defined)
 /* じ计1755 */
-function draw_mrest(s) {
+function draw_mrest(s: voiceItem) {
     var x1, x2, prev,
         p_st = staff_tb[s.st],
         y = p_st.y + (p_st.topbar + p_st.botbar) / 2,
@@ -1242,7 +1246,7 @@ function draw_mrest(s) {
 } // draw_mrest()
 
 /* じ计2750 */
-function grace_slur(s) {
+function grace_slur(s: voiceItem) {
     var yy, x0, y0, x3, y3, bet1, bet2, dy1, dy2, last, below,
         so = s,
         g = s.extra
@@ -1360,7 +1364,7 @@ function grace_slur(s) {
 /* -- draw grace notes -- */
 /* (the staves are defined) */
 /* じ计1532 */
-function draw_gracenotes(s) {
+function draw_gracenotes(s: voiceItem) {
     var x1, y1,
         last, note,
         bm: { s2?} = {},
@@ -1419,7 +1423,7 @@ function draw_gracenotes(s) {
 
 /* -- set the y offset of the dots -- */
 /* じ计861 */
-function setdoty(s, y_tb) {
+function setdoty(s: voiceItem, y_tb) {
     var m, m1, y
 
     /* set the normal offsets */
@@ -1456,11 +1460,11 @@ function setdoty(s, y_tb) {
 // get the x and y position of a note head
 // (when the staves are defined)
 /* じ计69 */
-function x_head(s, note) {
+function x_head(s: voiceItem, note: noteItem) {
     return s.x + note.shhd * stv_g.scale
 }
 /* じ计78 */
-function y_head(s, note) {
+function y_head(s: voiceItem, note: noteItem) {
     return staff_tb[s.st].y + 3 * (note.pit - 18)
 }
 
@@ -1468,7 +1472,7 @@ function y_head(s, note) {
 /* (the staves are defined) */
 // sets {x,y}_note
 /* じ计3324 */
-function draw_basic_note(s, m, y_tb) {
+function draw_basic_note(s: voiceItem, m, y_tb) {
     var i, p, yy, dotx, doty, inv,
         old_color: (boolean | string) = false,
         note = s.notes[m],
@@ -1590,7 +1594,7 @@ function draw_basic_note(s, m, y_tb) {
 /* -- draw a note or a chord -- */
 /* (the staves are defined) */
 /* じ计1839 */
-function draw_note(s,
+function draw_note(s: voiceItem,
     fl) {		// draw flags
     var s2, i, m, y, slen, c, nflags,
         y_tb = new Array(s.nhd + 1),
@@ -1655,7 +1659,7 @@ function draw_note(s,
 
 // find where to start a long decoration
 /* じ计426 */
-function prev_scut(s) {
+function prev_scut(s:voiceItem) {
     while (s.prev) {
         s = s.prev
         if (s.rbstart)
@@ -1675,11 +1679,11 @@ function prev_scut(s) {
 
 /* -- decide whether a slur goes up or down (same voice) -- */
 /* じ计1109 */
-function slur_direction(k1, k2) {
+function slur_direction(k1: voiceItem, k2: voiceItem) {
     var s, some_upstem, low, dir
 
     // check if slur sequence in a multi-voice staff
-    function slur_multi(s1, s2) {
+    function slur_multi(s1: voiceItem, s2: voiceItem) {
         //		while (1) {
         //			if (s1.multi)		// if multi voice
         //				//fixme: may change
@@ -2222,7 +2226,7 @@ function draw_slur(path,	// list of symbols under the slur
 
 /* -- draw the slurs between 2 symbols --*/
 /* じ计5677 */
-function draw_slurs(s, last?) {
+function draw_slurs(s: voiceItem, last?) {
     var gr1, i, m, note, sls, nsls
 
     // draw a slur knowing the start and stop elements
@@ -2413,8 +2417,9 @@ function draw_slurs(s, last?) {
 /* See http://moinejf.free.fr/abcm2ps-doc/tuplets.html
  * for the value of 'tp.f' */
 /* じ计9998 */
-function draw_tuplet(s1) {
-    var s2, s3, g, upstaff, nb_only,
+function draw_tuplet(s1: voiceItem) {
+    var s2: voiceItem, s3: voiceItem
+    var g, upstaff, nb_only,
         x1, x2, y1, y2, xm, ym, a, s0, yy, yx, dy, a, dir, r,
         tp = s1.tp.shift()		// tuplet parameters
 
@@ -2779,7 +2784,7 @@ function draw_tie(not1, not2,
     // 1: no starting note
     // 2: no ending note
     // 3: no start for clef or staff change
-    var m, x1, s, y, h, time,
+    var m, x1,  y, h, time,
         p = job == 2 ? not1.pit : not2.pit,
         dir = (not1.tie_ty & 0x07) == C.SL_ABOVE ? 1 : -1,
         s1 = not1.s,
@@ -2867,7 +2872,8 @@ function draw_tie(not1, not2,
 /* -- 酶籹綟才ぇ丁┮Τ羛么 -- */
 /* じ计2211 */
 function draw_all_ties(p_voice) {
-    var s, s1, s2, clef_chg, x, dx, m, not1, not2,
+    var s: voiceItem, s1: voiceItem, s2: voiceItem
+    var clef_chg, x, dx, m, not1, not2,
         tim2 = 0
 
     /* search the start of ties */
@@ -2960,11 +2966,12 @@ function draw_all_ties(p_voice) {
  */
 /* じ计6854 */
 function draw_sym_near() {
-    var p_voice, p_st, s, v, st, y, g, w, i, st, dx, top, bot, ymn,
+    var s: voiceItem
+    var p_voice, p_st,  v, st, y, g, w, i, st, dx, top, bot, ymn,
         output_sav = output;
 
     // set the staff offsets of a beam
-    function set_yab(s1, s2) {
+    function set_yab(s1: voiceItem, s2: voiceItem) {
         var y,
             k = realwidth / YSTEP,
             i = (s1.x / k) | 0,
@@ -3255,7 +3262,7 @@ function draw_vname(indent, stl) {
 // -- set the y offset of the staves and return the height of the whole system --
 /* じ计3924 */
 function set_staff() {
-    var i, st, prev_staff, v, fmt, s,
+    var i, st, prev_staff, v, fmt, 
         y, staffsep, dy, maxsep, mbot, val, p_voice, p_staff,
         sy = cur_sy
 
@@ -3394,7 +3401,8 @@ function set_staff() {
 /* -- draw the staff systems and the measure bars -- */
 /* じ计12864 */
 function draw_systems(indent) {
-    var s, s2, st, x, x2, res, sy,
+    var s: voiceItem, s2: voiceItem
+    var st, x, x2, res, sy,
         xstaff = [],
         stl = [],		// all staves in the line
         bar_bot = [],
@@ -3431,7 +3439,7 @@ function draw_systems(indent) {
             y = 0,
             ln = "",
             stafflines = staff_tb[st].stafflines,
-            l = stafflines.length,
+            len = stafflines.length,
             il = 6 * staff_tb[st].staffscale // interline
 
         if (!/[\[|]/.test(stafflines))
@@ -3446,11 +3454,11 @@ function draw_systems(indent) {
             xygl(x1, staff_tb[st].y, 'stdef' + cfmt.fullsvg)
             return
         }
-        for (i = 0; i < l; i++, y -= il) {
+        for (i = 0; i < len; i++, y -= il) {
             if (stafflines[i] == '.')
                 continue
             dy = 0
-            for (; i < l; i++, y -= il, dy -= il) {
+            for (; i < len; i++, y -= il, dy -= il) {
                 switch (stafflines[i]) {
                     case '.':
                     case '-':
@@ -3480,12 +3488,12 @@ function draw_systems(indent) {
                 st_l: stafflines,
                 st_w: w | 0
             }
-            i = 'stdef' + cfmt.fullsvg;
+            var strdef = 'stdef' + cfmt.fullsvg;
             if (ln.indexOf('<path', 1) < 0)
-                glyphs[i] = ln.replace('path', 'path id="' + i + '"')
+                glyphs[strdef] = ln.replace('path', 'path id="' + strdef + '"')
             else
-                glyphs[i] = '<g id="' + i + '">\n' + ln + '\n</g>';
-            xygl(x1, y, i)
+                glyphs[strdef] = '<g id="' + strdef + '">\n' + ln + '\n</g>';
+            xygl(x1, y, strdef)
             return
         }
         out_XYAB('<g transform="translate(X, Y)">\n' + ln + '\n</g>\n', x1, y)
@@ -3803,8 +3811,9 @@ function draw_systems(indent) {
 // (possible hook)
 /* じ计4155 */
 Abc.prototype.draw_symbols = function (p_voice) {
-    var bm: { s2?} = {},
-        s, x, y, st;
+    var bm: BeamItem = {}
+    var s: voiceItem
+        var x, y, st;
 
     //	bm.s2 = undefined
     for (s = p_voice.sym; s; s = s.next) {
@@ -4055,8 +4064,9 @@ function draw_all_sym() {
 
 /* -- set the tie directions for one voice -- */
 /* じ计4147 */
-function set_tie_dir(s) {
-    var i, ntie, dir, sec, pit, ty, s2
+function set_tie_dir(s: voiceItem) {
+    var s2:: voiceItem;
+    var i, ntie, dir, sec, pit, ty
 
     for (; s; s = s.next) {
         if (!s.ti1)
@@ -4183,7 +4193,8 @@ function set_tie_dir(s) {
 /* -- have room for the ties out of the staves -- */
 /* じ计1761 */
 function set_tie_room() {
-    var p_voice, s, s2, v, dx, y, dy
+    var s: voiceItem, s2: voiceItem
+    var p_voice, v, dx, y, dy
 
     for (v = 0; v < voice_tb.length; v++) {
         p_voice = voice_tb[v];

@@ -16,7 +16,7 @@ namespace autocad_part2
         public object sym_name { get; set; }
         public object[] font_tb { get; set; }    // fonts - index = font.fid
         public Dictionary<string, object> font_st { get; set; }    // font style => font_tb index for incomplete user fonts
-        
+
         public List<object> mhooks { get; set; }
         public object sheet { get; set; }
         public Regex ft_re { get; set; }
@@ -180,7 +180,7 @@ namespace autocad_part2
         public int iend { get; set; }
         public string file { get; set; }
         public object ckey { get; set; }
-        public bool eol { get; set; }
+        public int eol { get; set; }
         public Dictionary<string, object> ctrl { get; set; }
         public int repeat_n { get; set; }
         public int repeat_k { get; set; }
@@ -188,12 +188,12 @@ namespace autocad_part2
         public object tp { get; set; }
         public object tps { get; set; }
         public int tpn { get; set; }
-        public bool bol { get; set; }
+        public int bol { get; set; }
         public bool stemless { get; set; }
         public bool ufmt { get; set; }
-        public Dictionary<string, object> tune_v_opts { get; set; }
-        public Dictionary<string, object> voice_opts { get; set; }
-        public Dictionary<string, object> tune_opts { get; set; }
+        public Dictionary<string, int> tune_v_opts { get; set; }
+        public Dictionary<string, int> voice_opts { get; set; }
+        public Dictionary<string, int> tune_opts { get; set; }
         public Regex select { get; set; }
     }
 
@@ -241,10 +241,10 @@ namespace autocad_part2
         public double staffnonote { get; set; }
         public VoiceClef clef { get; set; }
         public List<object> acc { get; set; }
-        public List<object> sls { get; set; }
+        public List<SlurGroup> sls { get; set; }
         public double hy_st { get; set; }
         public double cst { get; set; }
-        public double st { get; set; }
+        public int st { get; set; }
         public VoiceKey ckey { get; set; }
         public bool init { get; set; }
         public bool jianpu { get; set; }
@@ -462,12 +462,16 @@ namespace autocad_part2
     public class NoteItem
     {
         public int pit { get; set; }
+        public int opit { get; set; }
         public double shhd { get; set; }
         public int shac { get; set; }
         public int dur { get; set; }
         public int midi { get; set; }
         public int jn { get; set; }
         public int jo { get; set; }
+        public int acc { get; set; }
+        public bool invis { get; set; }
+        public List<DecorationItem> a_dd { get; set; }
     }
 
     public class DecorationItem
@@ -479,7 +483,15 @@ namespace autocad_part2
         public int hd { get; set; }
         public double wl { get; set; }
         public double wr { get; set; }
+        public int dx { get; set; }
+        public int dy { get; set; }
         public string str { get; set; }
+        public int ty { get; set; }
+        public int x { get; set; }
+        public int y { get; set; }
+        public bool inv { get; set; }
+        public bool has_val { get; set; }
+        public int val { get; set; }
         public DecorationItem dd_st { get; set; }
         public DecorationItem dd_en { get; set; }
     }
@@ -525,7 +537,56 @@ namespace autocad_part2
         public int bot { get; set; }
     }
 
+    public class Staff
+    {
+        public int flags { get; set; }
+        public double[] top { get; set; }
+        public double[] bot { get; set; }
+        public double topbar { get; set; }
+        public double botbar { get; set; }
+        public double hll { get; set; }
+        public int[] hlmap { get; set; }
+        public double[] hlu { get; set; }
+        public double[] hld { get; set; }
+        public string stafflines { get; set; }
+        public string scale_str { get; set; }
+        public int botline { get; set; }
+        public double y { get; set; }
+        public double ann_top { get; set; }
+        public double ann_bot { get; set; }
+        public double staffscale { get; set; }
+        public double staffnonote { get; set; }
+    }
 
+    public class BeamItem
+    {
+
+        public double a { get; set; }
+        public double b { get; set; }
+        public VoiceItem s1 { get; set; }
+        public VoiceItem s2 { get; set; }
+        public int nflags { get; set; }
+    }
+
+    public class SlurGroup
+    {
+        public string ty { get; set; }
+        public VoiceItem ss { get; set; }
+        public VoiceItem se { get; set; }
+        public object nte { get; set; }
+        public bool grace { get; set; }
+        public string loc { get; set; }
+    }
+
+    public class Gener
+    {
+        public Font curfont { get; set; }
+        public Font deffont { get; set; }
+        public List<object> a_sl { get; set; }
+        public int nbar { get; set; }
+        public List<object> st_print { get; set; }
+        public int vnt { get; set; }
+    }
 
 
     public class VoiceBase : IVoiceBase
@@ -674,10 +735,10 @@ namespace autocad_part2
         public bool stemless { get; set; }
         public int shrink { get; set; }
         public double space { get; set; }
-        public List<(int ty, VoiceItem ss, VoiceItem se)> sls { get; set; }
+        public List<SlurGroup> sls { get; set; }
         //public { int ty, voiceitem ss, voiceitem se} sls { get; set; }
-        public List<int> slurstart { get; set; }
-        public List<int> slurend { get; set; }
+        public List<int> slurStart { get; set; }
+        public List<int> slurEnd { get; set; }
         public bool soln { get; set; }
         public bool nl { get; set; }
         public int repeat_n { get; set; }
@@ -892,10 +953,10 @@ namespace autocad_part2
         public bool in_tuplet { get; set; }
         public int tpe { get; set; }
         public bool stemless { get; set; }
-        public List<(int ty, VoiceItem ss, VoiceItem se)> sls { get; set; }
+        public List<SlurGroup> sls { get; set; }
         //public { int ty, voiceitem ss, voiceitem se} sls { get; set; }
-        public List<int> slurstart { get; set; }
-        public List<int> slurend { get; set; }
+        public List<int> slurStart { get; set; }
+        public List<int> slurEnd { get; set; }
         public bool soln { get; set; }
         public bool nl { get; set; }
         public double xs { get; set; }

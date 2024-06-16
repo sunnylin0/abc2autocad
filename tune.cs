@@ -12,7 +12,7 @@ namespace autocad_part2
     {
         VoiceStavesSymbols par_sy = new VoiceStavesSymbols();
         VoiceStavesSymbols cur_sy = new VoiceStavesSymbols();
-        PageVoiceTune voice_tb = new PageVoiceTune();
+        List< PageVoiceTune> voice_tb = new List<PageVoiceTune>();
         var curvoice = new object();
         var staves_found = new object();
         var vover = new object();
@@ -2627,7 +2627,7 @@ public class Program
         user.errmsg(h + txt, l, c);
     }
 
-    public static void Error(int sev, dynamic s, string msg, object a1 = null, object a2 = null, object a3 = null, object a4 = null)
+    public static void Error(int sev, VoiceItem s, string msg, object a1 = null, object a2 = null, object a3 = null, object a4 = null)
     {
         if (sev == 0 && cfmt.quiet)
             return;

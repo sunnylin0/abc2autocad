@@ -85,14 +85,14 @@ namespace autocad_part2
 
 
 
-        public static string gene;
-        public static string staff_tb;
-        public static int nstaff;         // current number of staves
-        public static int tsnext;         // next line when cut
-        public static double realwidth;    // real staff width while generating
-        public static bool insert_meter;  // insert the time signature
-        public static double spf_last;     // spacing for last short line
-        public static double smallest_duration;
+        public Gener gene;
+        public  List<Staff> staff_tb;
+        public  int nstaff;         // current number of staves
+        public  int tsnext;         // next line when cut
+        public  double realwidth;    // real staff width while generating
+        public  bool insert_meter;  // insert the time signature
+        public  double spf_last;     // spacing for last short line
+        public  double smallest_duration;
 
         /******************************************************/
 
@@ -102,7 +102,7 @@ namespace autocad_part2
         */
         (int head, int dots, int flags) identify_note(VoiceItem s, int dur_o)
         {
-            int head=0, flags;
+            int head = 0, flags;
             int dots = 0;
             int dur = dur_o;
 
@@ -225,6 +225,8 @@ namespace autocad_part2
             s.xmx = dx_max;
         }
 
+        // set the accidental shifts for a set of chords
+        // 設定一組和弦的臨時記號改變
         void acc_shift(dynamic notes, double dx_head)
         {
             int i, i1, i2, dx, dx1, dx2, ps, p1, acc;
@@ -338,11 +340,15 @@ namespace autocad_part2
             }
         }
 
+        /* set the horizontal shift of accidentals */
+        /* this routine is called only once per tune */
+        /* 設定臨時記號的水平移動 */
+        /* 每首曲子只呼叫此例程一次 */
         void set_acc_shft()
         {
             VoiceItem s, s2;
             int st, i, acc, t, dx_head;
-            List<NoteItem>     notes;
+            List<autocad_part2.NoteItem> notes;
 
             s = tsfirst;
             while (s != null)
@@ -390,6 +396,8 @@ namespace autocad_part2
             }
         }
 
+        // link a symbol before an other one
+        // 將一個符號連結到另一個符號之前
         void lkvsym(VoiceItem s, dynamic next)
         {
             s.next = next;
@@ -442,6 +450,8 @@ namespace autocad_part2
             }
         }
 
+        /* -- unlink a symbol -- */
+        /* -- 取消符號連結 -- */
         void unlksym(VoiceItem s)
         {
             if (s.next != null)
@@ -485,6 +495,8 @@ namespace autocad_part2
                 tsnext = s.ts_next;
         }
 
+        /* -- insert a clef change (treble or bass) before a symbol -- */
+        /* -- 在符號前插入譜號變化（高音或低音） -- */
         dynamic insert_clef(VoiceItem s, int clef_type, int clef_line)
         {
             dynamic p_voice = s.p_v;
@@ -520,10 +532,14 @@ namespace autocad_part2
             return new_s;
         }
 
+        /* -- set the staff of the floating voices -- */
+        /* this function is called only once per tune */
+        /* -- 設定浮動聲音的五線譜 -- */
+        /* 每個曲調只呼叫此函數一次 */
         void set_float()
         {
             VoiceItem s, s1;
-            dynamic p_voice, st, staff_chg ;
+            dynamic p_voice, st, staff_chg;
             int v, up, down;
             for (v = 0; v < voice_tb.Length; v++)
             {
@@ -619,6 +635,8 @@ namespace autocad_part2
             }
         }
 
+        /* -- set the x offset of the grace notes -- */
+        /* -- 設定裝飾音的 x 偏移量 -- */
         double set_graceoffs(VoiceItem s)
         {
             dynamic next, m, dx, x;
@@ -680,6 +698,83 @@ namespace autocad_part2
             return x;
         }
 
+
+        // Compute the smallest spacing between symbols according to chord symbols
+        //	so that they stay at the same offset
+        // and, also, adjust the spacing due to the lyric words.
+        // Constraints:
+        // - assume the chord symbols are only in the first staff
+        // - treat only the first chord symbol of each symbol
+        // - the chord symbols under the staff are ignored
+        // 根據和弦符號計算符號之間的最小間距
+        // 使它們保持相同的偏移量
+        // 並且，也根據歌詞調整間距。
+        // 約束：
+        // - 假設和弦符號只存在於第一個五線譜中
+        // - 僅處理每個符號的第一個和弦符號
+        // - 譜表下的和弦符號將被忽略
+        /* 字元數：1359 */
+        void set_w_chs(VoiceItem s)
+        {
+            int i;
+            char ch;
+            double w0, s0, dw;
+            double x = 0;
+            double n = 0;
+
+            SetFont("vocal");
+            while (s != null)
+            {
+                if (s.Shrink)
+                {
+                    x += s.Shrink;
+                    n++;
+                }
+                if (s.ALy)          // if some lyric
+                    LySet(s);
+
+                if (!s.AGch)
+                    continue;
+                for (i = 0; i < s.AGch.Length; i++)
+                {
+                    ch = s.AGch[i];
+                    if (ch.Type != 'g' || ch.Y < 0) // upper chord symbol only
+                        continue;
+                    if (w0 != 0)        // width of the previous chord symbol
+                    {
+                        if (w0 > x + ch.X)
+                        {
+                            if (s.Prev // (if not at start of a secondary voice)
+                                && s.Prev.SeqSt
+                                && s.Prev.Type == C.BAR) // don't move away
+                                n--;        // the symbol from a bar
+                            dw = (w0 - x - ch.X) / n;
+                            while (true)
+                            {
+                                s0 = s0.TSNext;
+                                if (s0.Shrink)
+                                    s0.Shrink += dw;
+                                if (s0 == s
+                                    || s0.Type == C.BAR)
+                                    break;
+                            }
+                        }
+                    }
+                    s0 = s;
+                    w0 = ch.Text.Wh[0];
+                    n = 0;
+                    //			x = ch.Font.Box ? -2 : 0
+                    x = 0;
+                    break;
+                }
+                s = s.TSNext;
+            }
+        }
+
+
+
+        // compute the width needed by the left and right annotations
+        // 計算左右註解所需的寬度
         double gchord_width(VoiceItem s, double wlnote, double wlw)
         {
             dynamic gch;
@@ -710,6 +805,451 @@ namespace autocad_part2
             return wlw;
         }
 
+
+        /* -- set the width of a symbol -- */
+        /* This routine sets the minimal left and right widths wl,wr
+         * so that successive symbols are still separated when
+         * no extra glue is put between them */
+        // (possible hook)
+        /* -- 設定符號的寬度 -- */
+        /* 此例程設定最小左右寬度 wl,wr
+          * 這樣連續的符號在以下情況下仍然是分開的
+          * 它們之間沒有額外的膠水 */
+        //（可能的鉤子）
+        /* 字元數：11885 */
+        public void set_width(VoiceItem s)
+        {
+            double s2, i, m, xx, w, wlnote, wlw, acc, nt, bar_type, meter, last_acc, n1, n2, esp, tmp;
+
+            if (s.play)
+            {
+                s.wl = s.wr = 0;
+                return;
+            }
+
+            switch (s.type)
+            {
+                case C.NOTE:
+                case C.REST:
+                    s.wr = wlnote = s.invis ? 0 : hw_tb[s.head];
+
+                    if (s.xmx > 0)
+                        s.wr += s.xmx + 4;
+
+                    for (s2 = s.prev; s2 != null; s2 = s2.prev)
+                    {
+                        if (w_tb[s2.type])
+                            break;
+                    }
+
+                    if (s2 != null)
+                    {
+                        switch (s2.type)
+                        {
+                            case C.BAR:
+                            case C.CLEF:
+                            case C.KEY:
+                            case C.METER:
+                                wlnote += 3;
+                                break;
+                            case C.STBRK:
+                                wlnote += 8;
+                                break;
+                        }
+                    }
+
+                    for (m = 0; m <= s.nhd; m++)
+                    {
+                        nt = s.notes[m];
+                        xx = nt.shhd;
+
+                        if (xx < 0)
+                        {
+                            if (wlnote < -xx + 5)
+                                wlnote = -xx + 5;
+                        }
+
+                        acc = nt.acc;
+
+                        if (acc != null)
+                        {
+                            tmp = nt.shac + (acc.GetType() == typeof(object) ? 5.5f : 3.5f);
+
+                            if (wlnote < tmp)
+                                wlnote = tmp;
+                        }
+
+                        if (nt.a_dd)
+                            wlnote += deco_wch(nt);
+                    }
+
+                    if (s2 != null)
+                    {
+                        switch (s2.type)
+                        {
+                            case C.BAR:
+                            case C.CLEF:
+                            case C.KEY:
+                            case C.METER:
+                                wlnote -= 3;
+                                break;
+                        }
+                    }
+
+                    if (s.a_dd)
+                        wlnote = deco_width(s, wlnote);
+
+                    if (s.beam_st && s.beam_end && s.stem > 0 && s.nflags > 0)
+                    {
+                        if (s.wr < s.xmx + 9)
+                            s.wr = s.xmx + 9;
+                    }
+
+                    if (s.dots)
+                    {
+                        if (s.wl == null)
+                        {
+                            switch (s.head)
+                            {
+                                case C.SQUARE:
+                                case C.OVALBARS:
+                                    s.xmx += 3;
+                                    break;
+                                case C.OVAL:
+                                    s.xmx += 1;
+                                    break;
+                            }
+                        }
+
+                        if (s.wr < s.xmx + 8)
+                            s.wr = s.xmx + 8;
+
+                        if (s.dots >= 2)
+                            s.wr += 3.5f * (s.dots - 1);
+                    }
+
+                    if (s.trem2 && s.beam_end && wlnote < 20)
+                        wlnote = 20;
+
+                    wlw = wlnote;
+
+                    if (s2 != null)
+                    {
+                        switch (s2.type)
+                        {
+                            case C.NOTE:
+                                if (s2.stem > 0 && s.stem < 0)
+                                {
+                                    if (wlw < 7)
+                                        wlw = 7;
+                                }
+
+                                if ((s.y > 27 && s2.y > 27) || (s.y < -3 && s2.y < -3))
+                                {
+                                    if (wlw < 6)
+                                        wlw = 6;
+                                }
+
+                                if (s2.tie)
+                                {
+                                    if (wlw < 14)
+                                        wlw = 14;
+                                }
+                                break;
+                            case C.CLEF:
+                                if (s2.second || s2.clef_small)
+                                    break;
+                                goto case C.KEY;
+                            case C.KEY:
+                                if (s.a_gch)
+                                    wlw += 4;
+                                goto case C.METER;
+                            case C.METER:
+                                wlw += 3;
+                                break;
+                        }
+                    }
+
+                    if (s.a_gch)
+                        wlw = gchord_width(s, wlnote, wlw);
+
+                    if (s.prev != null && s.prev.type == C.GRACE)
+                    {
+                        s.prev.wl += wlnote - 4.5f;
+                        s.wl = s.prev.wl;
+                    }
+                    else
+                    {
+                        s.wl = wlw;
+                    }
+                    return;
+                case C.SPACE:
+                    xx = s.width / 2;
+                    s.wr = xx;
+
+                    if (s.a_gch)
+                        xx = gchord_width(s, xx, xx);
+
+                    if (s.a_dd)
+                        xx = deco_width(s, xx);
+
+                    s.wl = xx;
+                    return;
+                case C.BAR:
+                    bar_type = s.bar_type;
+
+                    switch (bar_type)
+                    {
+                        case "|":
+                            w = 5;
+                            break;
+                        case "[":
+                            w = 0;
+                            break;
+                        default:
+                            w = 2 + 2.8f * bar_type.Length;
+
+                            for (i = 0; i < bar_type.Length; i++)
+                            {
+                                switch (bar_type[i])
+                                {
+                                    case "[":
+                                    case "]":
+                                        w += 1;
+                                        goto case ":";
+                                    case ":":
+                                        w += 2;
+                                        break;
+                                }
+                            }
+                            break;
+                    }
+
+                    s.wl = w;
+
+                    if (s.next != null && s.next.type != C.METER)
+                        s.wr = 7;
+                    else
+                        s.wr = 5;
+
+                    if (s.invis && s.prev != null && s.prev.bar_type)
+                        s.wl = s.wr = 2;
+
+                    s2 = s.prev;
+
+                    if (s2 != null && s2.type == C.GRACE)
+                        s.wl -= 6;
+
+                    for (; s2 != null; s2 = s2.prev)
+                    {
+                        if (w_tb[s2.type])
+                        {
+                            if (s2.type == C.STBRK)
+                                s.wl -= 12;
+                            break;
+                        }
+                    }
+
+                    if (s.a_dd)
+                        s.wl = deco_width(s, s.wl);
+
+                    if (s.text != null && s.text.Length < 4 && s.next != null && s.next.a_gch)
+                    {
+                        s.wr += strwh(s.text)[0] + 2;
+
+                        if (cfmt.measurenb > (0 & s.bar_num) && s.bar_num % cfmt.measurenb)
+                            s.wr += 4;
+                    }
+                    return;
+                case C.CLEF:
+                    if (s.invis)
+                    {
+                        s.wl = s.wr = 1;
+                        return;
+                    }
+
+                    if (s.prev != null && s.prev.type == C.STBRK)
+                    {
+                        s.wl = 6;
+                        s.wr = 13;
+                        s.clef_small = null;
+                        return;
+                    }
+
+                    s.wl = s.clef_small ? 11 : 12;
+                    s.wr = s.clef_small ? 8 : 13;
+                    return;
+                case C.KEY:
+                    if (s.invis)
+                    {
+                        s.wl = s.wr = 0;
+                        return;
+                    }
+
+                    s.wl = 0;
+                    esp = 3;
+                    n1 = s.k_sf;
+                    if (s.k_old_sf != null && (s.fmt.cancelkey || n1 == 0))
+                        n2 = s.k_old_sf;
+                    else
+                        n2 = 0;
+
+                    if (n1 * n2 >= 0)
+                    {
+                        if (n1 < 0)
+                            n1 = -n1;
+
+                        if (n2 < 0)
+                            n2 = -n2;
+
+                        if (n2 > n1)
+                            n1 = n2;
+                    }
+                    else
+                    {
+                        n1 -= n2;
+
+                        if (n1 < 0)
+                            n1 = -n1;
+
+                        esp += 3;
+                    }
+
+                    if (s.k_bagpipe == 'p')
+                        n1++;
+
+                    if (s.k_a_acc != null)
+                    {
+                        n2 = s.k_a_acc.Length;
+
+                        if (s.exp)
+                            n1 = n2;
+                        else
+                            n1 += n2;
+
+                        if (n2 != 0)
+                            last_acc = s.k_a_acc[0].acc;
+
+                        for (i = 1; i < n2; i++)
+                        {
+                            acc = s.k_a_acc[i];
+
+                            if (acc.pit > s.k_a_acc[i - 1].pit + 6 || acc.pit < s.k_a_acc[i - 1].pit - 6)
+                                n1--;
+                            else if (acc.acc != last_acc)
+                                esp += 3;
+
+                            last_acc = acc.acc;
+                        }
+                    }
+
+                    if (n1 == 0)
+                        break;
+
+                    s.wr = 5.5f * n1 + esp;
+
+                    if (s.prev != null && !s.prev.bar_type)
+                        s.wl += 2;
+
+                    return;
+                case C.METER:
+                    s.x_meter = new double[s.a_meter.Length];
+
+                    if (s.a_meter.Length == 0)
+                        break;
+
+                    wlw = 0;
+
+                    for (i = 0; i < s.a_meter.Length; i++)
+                    {
+                        meter = s.a_meter[i];
+
+                        switch (meter.top[0])
+                        {
+                            case 'C':
+                            case 'c':
+                            case 'o':
+                                s.x_meter[i] = wlw + 6;
+                                wlw += 12;
+                                break;
+                            case '.':
+                            case '|':
+                                s.x_meter[i] = s.x_meter[i - 1];
+                                break;
+                            default:
+                                w = 0;
+
+                                if (meter.bot == null || meter.top.Length > meter.bot.Length)
+                                    meter = meter.top;
+                                else
+                                    meter = meter.bot;
+
+                                for (m = 0; m < meter.Length; m++)
+                                {
+                                    switch (meter[m])
+                                    {
+                                        case '(':
+                                            wlw += 4;
+                                            goto case ')';
+                                        case ')':
+                                        case '1':
+                                            w += 4;
+                                            break;
+                                        default:
+                                            w += 12;
+                                            break;
+                                    }
+                                }
+
+                                s.x_meter[i] = wlw + w / 2;
+                                wlw += w;
+                                break;
+                        }
+                    }
+
+                    s.wl = 1;
+                    s.wr = wlw + 7;
+                    return;
+                case C.MREST:
+                    s.wl = 6;
+                    s.wr = 66;
+                    return;
+                case C.GRACE:
+                    if (s.invis)
+                        break;
+
+                    s.wl = set_graceoffs(s);
+                    s.wr = 0;
+
+                    if (s.a_ly)
+                        ly_set(s);
+
+                    return;
+                case C.STBRK:
+                    s.wl = s.xmx;
+                    s.wr = 8;
+                    return;
+                case C.CUSTOS:
+                    s.wl = s.wr = 4;
+                    return;
+                case C.TEMPO:
+                    tempo_build(s);
+                    break;
+                case C.BLOCK:
+                case C.REMARK:
+                case C.STAVES:
+                    break;
+                default:
+                    error(2, s, "set_width - Cannot set width for symbol $1", s.type);
+                    break;
+            }
+
+            s.wl = s.wr = 0;
+        }
+
+
+        // convert delta time to natural spacing
+        // 將增量時間轉換為自然間距
         double time2space(VoiceItem s, int len)
         {
             int i, l;
@@ -773,527 +1313,89 @@ namespace autocad_part2
         /******************************************************/
 
 
-
-
-       partial class Abc
+        // set the natural space
+        // 設定自然空間
+        /* 字元數：2530 */
+        double set_space(VoiceItem s, double ptime)
         {
-            public double[] dx_tb = new double[] { 1.1d, 2.2d };
-            public double[] hw_tb = new double[] { 1.1d, 2.2d };
-            public double[] w_note = new double[] { 1.1d, 2.2d };
+            double space, len, s2, stemdir;
 
-            /* -- set the width of a symbol -- */
-            /* This routine sets the minimal left and right widths wl,wr
-             * so that successive symbols are still separated when
-             * no extra glue is put between them */
-            // (possible hook)
-            /* -- 設定符號的寬度 -- */
-            /* 此例程設定最小左右寬度 wl,wr
-              * 這樣連續的符號在以下情況下仍然是分開的
-              * 它們之間沒有額外的膠水 */
-            //（可能的鉤子）
-            /* 字元數：11885 */
-            public void set_width(VoiceItem s)
+            len = s.time - ptime;
+
+            if (len == 0)
             {
-                double s2, i, m, xx, w, wlnote, wlw, acc, nt, bar_type, meter, last_acc, n1, n2, esp, tmp;
-
-                if (s.play)
-                {
-                    s.wl = s.wr = 0;
-                    return;
-                }
-
                 switch (s.type)
                 {
-                    case C.NOTE:
-                    case C.REST:
-                        s.wr = wlnote = s.invis ? 0 : hw_tb[s.head];
-
-                        if (s.xmx > 0)
-                            s.wr += s.xmx + 4;
-
-                        for (s2 = s.prev; s2 != null; s2 = s2.prev)
-                        {
-                            if (w_tb[s2.type])
-                                break;
-                        }
-
-                        if (s2 != null)
-                        {
-                            switch (s2.type)
-                            {
-                                case C.BAR:
-                                case C.CLEF:
-                                case C.KEY:
-                                case C.METER:
-                                    wlnote += 3;
-                                    break;
-                                case C.STBRK:
-                                    wlnote += 8;
-                                    break;
-                            }
-                        }
-
-                        for (m = 0; m <= s.nhd; m++)
-                        {
-                            nt = s.notes[m];
-                            xx = nt.shhd;
-
-                            if (xx < 0)
-                            {
-                                if (wlnote < -xx + 5)
-                                    wlnote = -xx + 5;
-                            }
-
-                            acc = nt.acc;
-
-                            if (acc != null)
-                            {
-                                tmp = nt.shac + (acc.GetType() == typeof(object) ? 5.5f : 3.5f);
-
-                                if (wlnote < tmp)
-                                    wlnote = tmp;
-                            }
-
-                            if (nt.a_dd)
-                                wlnote += deco_wch(nt);
-                        }
-
-                        if (s2 != null)
-                        {
-                            switch (s2.type)
-                            {
-                                case C.BAR:
-                                case C.CLEF:
-                                case C.KEY:
-                                case C.METER:
-                                    wlnote -= 3;
-                                    break;
-                            }
-                        }
-
-                        if (s.a_dd)
-                            wlnote = deco_width(s, wlnote);
-
-                        if (s.beam_st && s.beam_end && s.stem > 0 && s.nflags > 0)
-                        {
-                            if (s.wr < s.xmx + 9)
-                                s.wr = s.xmx + 9;
-                        }
-
-                        if (s.dots)
-                        {
-                            if (s.wl == null)
-                            {
-                                switch (s.head)
-                                {
-                                    case C.SQUARE:
-                                    case C.OVALBARS:
-                                        s.xmx += 3;
-                                        break;
-                                    case C.OVAL:
-                                        s.xmx += 1;
-                                        break;
-                                }
-                            }
-
-                            if (s.wr < s.xmx + 8)
-                                s.wr = s.xmx + 8;
-
-                            if (s.dots >= 2)
-                                s.wr += 3.5f * (s.dots - 1);
-                        }
-
-                        if (s.trem2 && s.beam_end && wlnote < 20)
-                            wlnote = 20;
-
-                        wlw = wlnote;
-
-                        if (s2 != null)
-                        {
-                            switch (s2.type)
-                            {
-                                case C.NOTE:
-                                    if (s2.stem > 0 && s.stem < 0)
-                                    {
-                                        if (wlw < 7)
-                                            wlw = 7;
-                                    }
-
-                                    if ((s.y > 27 && s2.y > 27) || (s.y < -3 && s2.y < -3))
-                                    {
-                                        if (wlw < 6)
-                                            wlw = 6;
-                                    }
-
-                                    if (s2.tie)
-                                    {
-                                        if (wlw < 14)
-                                            wlw = 14;
-                                    }
-                                    break;
-                                case C.CLEF:
-                                    if (s2.second || s2.clef_small)
-                                        break;
-                                    goto case C.KEY;
-                                case C.KEY:
-                                    if (s.a_gch)
-                                        wlw += 4;
-                                    goto case C.METER;
-                                case C.METER:
-                                    wlw += 3;
-                                    break;
-                            }
-                        }
-
-                        if (s.a_gch)
-                            wlw = gchord_width(s, wlnote, wlw);
-
-                        if (s.prev != null && s.prev.type == C.GRACE)
-                        {
-                            s.prev.wl += wlnote - 4.5f;
-                            s.wl = s.prev.wl;
-                        }
-                        else
-                        {
-                            s.wl = wlw;
-                        }
-                        return;
-                    case C.SPACE:
-                        xx = s.width / 2;
-                        s.wr = xx;
-
-                        if (s.a_gch)
-                            xx = gchord_width(s, xx, xx);
-
-                        if (s.a_dd)
-                            xx = deco_width(s, xx);
-
-                        s.wl = xx;
-                        return;
-                    case C.BAR:
-                        bar_type = s.bar_type;
-
-                        switch (bar_type)
-                        {
-                            case "|":
-                                w = 5;
-                                break;
-                            case "[":
-                                w = 0;
-                                break;
-                            default:
-                                w = 2 + 2.8f * bar_type.Length;
-
-                                for (i = 0; i < bar_type.Length; i++)
-                                {
-                                    switch (bar_type[i])
-                                    {
-                                        case "[":
-                                        case "]":
-                                            w += 1;
-                                            goto case ":";
-                                        case ":":
-                                            w += 2;
-                                            break;
-                                    }
-                                }
-                                break;
-                        }
-
-                        s.wl = w;
-
-                        if (s.next != null && s.next.type != C.METER)
-                            s.wr = 7;
-                        else
-                            s.wr = 5;
-
-                        if (s.invis && s.prev != null && s.prev.bar_type)
-                            s.wl = s.wr = 2;
-
-                        s2 = s.prev;
-
-                        if (s2 != null && s2.type == C.GRACE)
-                            s.wl -= 6;
-
-                        for (; s2 != null; s2 = s2.prev)
-                        {
-                            if (w_tb[s2.type])
-                            {
-                                if (s2.type == C.STBRK)
-                                    s.wl -= 12;
-                                break;
-                            }
-                        }
-
-                        if (s.a_dd)
-                            s.wl = deco_width(s, s.wl);
-
-                        if (s.text != null && s.text.Length < 4 && s.next != null && s.next.a_gch)
-                        {
-                            s.wr += strwh(s.text)[0] + 2;
-
-                            if (cfmt.measurenb > (0 & s.bar_num) && s.bar_num % cfmt.measurenb)
-                                s.wr += 4;
-                        }
-                        return;
-                    case C.CLEF:
-                        if (s.invis)
-                        {
-                            s.wl = s.wr = 1;
-                            return;
-                        }
-
-                        if (s.prev != null && s.prev.type == C.STBRK)
-                        {
-                            s.wl = 6;
-                            s.wr = 13;
-                            s.clef_small = null;
-                            return;
-                        }
-
-                        s.wl = s.clef_small ? 11 : 12;
-                        s.wr = s.clef_small ? 8 : 13;
-                        return;
-                    case C.KEY:
-                        if (s.invis)
-                        {
-                            s.wl = s.wr = 0;
-                            return;
-                        }
-
-                        s.wl = 0;
-                        esp = 3;
-                        n1 = s.k_sf;
-                        if (s.k_old_sf != null && (s.fmt.cancelkey || n1 == 0))
-                            n2 = s.k_old_sf;
-                        else
-                            n2 = 0;
-
-                        if (n1 * n2 >= 0)
-                        {
-                            if (n1 < 0)
-                                n1 = -n1;
-
-                            if (n2 < 0)
-                                n2 = -n2;
-
-                            if (n2 > n1)
-                                n1 = n2;
-                        }
-                        else
-                        {
-                            n1 -= n2;
-
-                            if (n1 < 0)
-                                n1 = -n1;
-
-                            esp += 3;
-                        }
-
-                        if (s.k_bagpipe == 'p')
-                            n1++;
-
-                        if (s.k_a_acc != null)
-                        {
-                            n2 = s.k_a_acc.Length;
-
-                            if (s.exp)
-                                n1 = n2;
-                            else
-                                n1 += n2;
-
-                            if (n2 != 0)
-                                last_acc = s.k_a_acc[0].acc;
-
-                            for (i = 1; i < n2; i++)
-                            {
-                                acc = s.k_a_acc[i];
-
-                                if (acc.pit > s.k_a_acc[i - 1].pit + 6 || acc.pit < s.k_a_acc[i - 1].pit - 6)
-                                    n1--;
-                                else if (acc.acc != last_acc)
-                                    esp += 3;
-
-                                last_acc = acc.acc;
-                            }
-                        }
-
-                        if (n1 == 0)
-                            break;
-
-                        s.wr = 5.5f * n1 + esp;
-
-                        if (s.prev != null && !s.prev.bar_type)
-                            s.wl += 2;
-
-                        return;
-                    case C.METER:
-                        s.x_meter = new double[s.a_meter.Length];
-
-                        if (s.a_meter.Length == 0)
-                            break;
-
-                        wlw = 0;
-
-                        for (i = 0; i < s.a_meter.Length; i++)
-                        {
-                            meter = s.a_meter[i];
-
-                            switch (meter.top[0])
-                            {
-                                case 'C':
-                                case 'c':
-                                case 'o':
-                                    s.x_meter[i] = wlw + 6;
-                                    wlw += 12;
-                                    break;
-                                case '.':
-                                case '|':
-                                    s.x_meter[i] = s.x_meter[i - 1];
-                                    break;
-                                default:
-                                    w = 0;
-
-                                    if (meter.bot == null || meter.top.Length > meter.bot.Length)
-                                        meter = meter.top;
-                                    else
-                                        meter = meter.bot;
-
-                                    for (m = 0; m < meter.Length; m++)
-                                    {
-                                        switch (meter[m])
-                                        {
-                                            case '(':
-                                                wlw += 4;
-                                                goto case ')';
-                                            case ')':
-                                            case '1':
-                                                w += 4;
-                                                break;
-                                            default:
-                                                w += 12;
-                                                break;
-                                        }
-                                    }
-
-                                    s.x_meter[i] = wlw + w / 2;
-                                    wlw += w;
-                                    break;
-                            }
-                        }
-
-                        s.wl = 1;
-                        s.wr = wlw + 7;
-                        return;
                     case C.MREST:
-                        s.wl = 6;
-                        s.wr = 66;
-                        return;
-                    case C.GRACE:
-                        if (s.invis)
-                            break;
+                        return s.wl;
+                }
+                return 0;
+            }
 
-                        s.wl = set_graceoffs(s);
-                        s.wr = 0;
+            if (s.ts_prev.type == C.MREST)
+                return 71;
 
-                        if (s.a_ly)
-                            ly_set(s);
+            space = time2space(s, len);
 
-                        return;
-                    case C.STBRK:
-                        s.wl = s.xmx;
-                        s.wr = 8;
-                        return;
-                    case C.CUSTOS:
-                        s.wl = s.wr = 4;
-                        return;
-                    case C.TEMPO:
-                        tempo_build(s);
-                        break;
+            while (!s.dur)
+            {
+                switch (s.type)
+                {
+                    case C.BAR:
+                        if (!s.next)
+                            space *= .9f;
+                        return space * .9f - 3;
+                    case C.CLEF:
+                        return space - s.wl - s.wr;
                     case C.BLOCK:
                     case C.REMARK:
                     case C.STAVES:
-                        break;
-                    default:
-                        error(2, s, "set_width - Cannot set width for symbol $1", s.type);
-                        break;
+                    case C.TEMPO:
+                        s = s.ts_next;
+                        if (s == null)
+                            return space;
+                        continue;
                 }
-
-                s.wl = s.wr = 0;
+                break;
             }
 
-            // set the natural space
-            // 設定自然空間
-            /* 字元數：2530 */
-            double set_space(VoiceItem s, double ptime)
+            if (s.dur && len <= C.BLEN / 4)
             {
-                double space, len, s2, stemdir;
+                s2 = s;
 
-                len = s.time - ptime;
-
-                if (len == 0)
+                while (s2 != null)
                 {
-                    switch (s.type)
+                    if (!s2.beam_st)
                     {
-                        case C.MREST:
-                            return s.wl;
+                        space *= .9f;
+                        break;
                     }
-                    return 0;
+
+                    s2 = s2.ts_next;
+
+                    if (s2 == null || s2.seqst)
+                        break;
                 }
+            }
 
-                if (s.ts_prev.type == C.MREST)
-                    return 71;
+            if (s.type == C.NOTE && s.nflags >= -1 && s.stem > 0)
+            {
+                stemdir = true;
 
-                space = time2space(s, len);
-
-                while (!s.dur)
+                for (s2 = s.ts_prev; s2 != null && s2.time == ptime; s2 = s2.ts_prev)
                 {
-                    switch (s.type)
+                    if (s2.type == C.NOTE && (s2.nflags < -1 || s2.stem > 0))
                     {
-                        case C.BAR:
-                            if (!s.next)
-                                space *= .9f;
-                            return space * .9f - 3;
-                        case C.CLEF:
-                            return space - s.wl - s.wr;
-                        case C.BLOCK:
-                        case C.REMARK:
-                        case C.STAVES:
-                        case C.TEMPO:
-                            s = s.ts_next;
-                            if (s == null)
-                                return space;
-                            continue;
-                    }
-                    break;
-                }
-
-                if (s.dur && len <= C.BLEN / 4)
-                {
-                    s2 = s;
-
-                    while (s2 != null)
-                    {
-                        if (!s2.beam_st)
-                        {
-                            space *= .9f;
-                            break;
-                        }
-
-                        s2 = s2.ts_next;
-
-                        if (s2 == null || s2.seqst)
-                            break;
+                        stemdir = false;
+                        break;
                     }
                 }
 
-                if (s.type == C.NOTE && s.nflags >= -1 && s.stem > 0)
+                if (stemdir)
                 {
-                    stemdir = true;
-
-                    for (s2 = s.ts_prev; s2 != null && s2.time == ptime; s2 = s2.ts_prev)
+                    for (s2 = s.ts_next; s2 != null && s2.time == s.time; s2 = s2.ts_next)
                     {
-                        if (s2.type == C.NOTE && (s2.nflags < -1 || s2.stem > 0))
+                        if (s2.type == C.NOTE && (s2.nflags < -1 || s2.stem < 0))
                         {
                             stemdir = false;
                             break;
@@ -1301,256 +1403,245 @@ namespace autocad_part2
                     }
 
                     if (stemdir)
-                    {
-                        for (s2 = s.ts_next; s2 != null && s2.time == s.time; s2 = s2.ts_next)
-                        {
-                            if (s2.type == C.NOTE && (s2.nflags < -1 || s2.stem < 0))
-                            {
-                                stemdir = false;
-                                break;
-                            }
-                        }
-
-                        if (stemdir)
-                            space *= .9f;
-                    }
+                        space *= .9f;
                 }
-
-                return space;
             }
 
-            // set the spacing inside tuplets or L: factor
-            // 設定連音或 L: 因子內的間距
-            /* 字元數：682 */
-            static void set_sp_tup(object s, object s_et)
+            return space;
+        }
+
+        // set the spacing inside tuplets or L: factor
+        // 設定連音或 L: 因子內的間距
+        /* 字元數：682 */
+        static void set_sp_tup(object s, object s_et)
+        {
+            var tim = s.time;
+            var ttim = s_et.time - tim;
+            var sp = time2space(s, ttim);
+            var s2 = s;
+            var wsp = 0;
+            while (true)
             {
-                var tim = s.time;
-                var ttim = s_et.time - tim;
-                var sp = time2space(s, ttim);
-                var s2 = s;
-                var wsp = 0;
-                while (true)
+                s2 = s2.ts_next;
+                if (s2.seqst)
                 {
-                    s2 = s2.ts_next;
-                    if (s2.seqst)
-                    {
-                        wsp += s2.space;
-                        if (s2.bar_type)
-                            wsp += 10;
-                    }
-                    if (s2 == s_et)
-                        break;
+                    wsp += s2.space;
+                    if (s2.bar_type)
+                        wsp += 10;
                 }
-                sp = (sp + wsp) / 2 / ttim;
-                while (true)
+                if (s2 == s_et)
+                    break;
+            }
+            sp = (sp + wsp) / 2 / ttim;
+            while (true)
+            {
+                s = s.ts_next;
+                if (s.seqst)
                 {
-                    s = s.ts_next;
-                    if (s.seqst)
-                    {
-                        s.space = sp * (s.time - tim);
-                        tim = s.time;
-                    }
-                    if (s == s_et)
-                        break;
+                    s.space = sp * (s.time - tim);
+                    tim = s.time;
                 }
-            }
-
-
-            // return an empty bar
-            // 回傳一個空柱
-            /* 字元數：434 */
-            VoiceItem _bar(VoiceItem s)
-            {
-                VoiceItem b = new VoiceItem();
-
-                b.type = C.BAR;
-                b.bar_type = "|";
-                b.fname = s.fname;
-                b.istart = s.istart;
-                b.iend = s.iend;
-                b.v = s.v;
-                b.p_v = s.p_v;
-                b.st = s.st;
-                b.dur = 0;
-                b.time = s.time + (s.dur != null ? s.dur : 0);
-                b.nhd = 0;
-                b.notes = new double[] { s.notes != null ? s.notes[0] : 22 };
-                b.seqst = true;
-                b.invis = true;
-                b.prev = s;
-                b.fmt = s.fmt;
-
-                return b;
-            }
-
-            // create an invisible bar for end of music lines
-            // 建立一個不可見的音樂線結尾欄
-            /* 字元數：447 */
-            VoiceItem add_end_bar(VoiceItem s)
-            {
-                VoiceItem b = _bar(s);
-                VoiceItem sn = s.ts_next;
-
-                b.wl = 0;
-                b.wr = 0;
-                b.ts_prev = s;
-                b.next = s.next;
-                b.ts_next = s.ts_next;
-                b.shrink = s.type == C.STBRK ? 0 : (s.wr + 3);
-
-                if (s.next != null)
-                    s.next.prev = b;
-
-                s.ts_next.ts_prev = b;
-                s.next = s.ts_next = b;
-                b.space = sn.space * .9f - 3;
-
-                return b;
-            }
-
-            /* -- set the width and space of all symbols -- */
-            // this function is called once for the whole tune
-            // and once more for each new music line
-            /* -- 設定所有符號的寬度和間距 -- */
-            // 這個函數在整個曲調中被呼叫一次
-            // 對於每個新的音樂線再一次
-            /* 字元數：2228 */
-            void set_allsymwidth(bool first)
-            {
-                double val, st, s_chs, stup, itup;
-                VoiceItem s = tsfirst;
-                VoiceItem s2 = s;
-                double xa = 0;
-                double[] xl = new double[100];
-                double[] wr = new double[100];
-                double maxx = xa;
-                double tim = s.time;
-
-                while (true)
-                {
-                    itup = 0;
-
-                    do
-                    {
-                        if ((s.a_gch != null || s.a_ly != null) && s_chs == null)
-                            s_chs = s;
-
-                        set_width(s);
-                        st = s.st;
-
-                        if (xl[st] == null)
-                            xl[st] = 0;
-
-                        if (wr[st] == null)
-                            wr[st] = 0;
-
-                        val = xl[st] + wr[st] + s.wl;
-
-                        if (val > maxx)
-                            maxx = val;
-
-                        if (s.dur != null && s.dur != s.notes[0].dur && first)
-                            itup = 1;
-
-                        s = s.ts_next;
-                    } while (s != null && !s.seqst);
-
-                    s2.shrink = maxx - xa;
-                    s2.space = s2.ts_prev != null ? set_space(s2, tim) : 0;
-
-                    if (s2.space == 0 && s2.ts_prev != null && s2.ts_prev.type == C.SPACE && s2.ts_prev.seqst)
-                        s2.space = s2.ts_prev.space /= 2;
-
-                    if (itup != 0)
-                    {
-                        if (stup == null)
-                            stup = s2;
-                    }
-                    else if (stup != null && stup.v == s2.v)
-                    {
-                        set_sp_tup(stup, s2);
-                        stup = null;
-                    }
-
-                    if (s2.shrink == 0)
-                    {
-                        if (s2.type == C.CLEF && !s2.ts_prev.bar_type)
-                        {
-                            s2.seqst = false;
-                            s2.time = tim;
-                        }
-                        else
-                        {
-                            s2.shrink = 10;
-                        }
-                    }
-
-                    tim = s2.time;
-
-                    if (s == null)
-                        break;
-
-                    s = s2;
-
-                    do
-                    {
-                        wr[s.st] = 0;
-                        s = s.ts_next;
-                    } while (!s.seqst);
-
-                    xa = maxx;
-
-                    do
-                    {
-                        st = s2.st;
-                        xl[st] = xa;
-
-                        if (s2.wr > wr[st])
-                            wr[st] = s2.wr;
-
-                        s2 = s2.ts_next;
-                    } while (!s2.seqst);
-                }
-
-                if (stup != null)
-                    set_sp_tup(stup, s2);
-
-                if (first && s_chs != null)
-                    set_w_chs(s_chs);
-            }
-
-            // insert a rest, this one replacing a sequence or a measure
-            // 插入一個休止符，這個休止符會取代一個序列或一個小節
-            /* 字元數：473 */
-            VoiceItem to_rest(VoiceItem so)
-            {
-                VoiceItem s = (VoiceItem)so.Clone();
-
-                s.prev.next = so.ts_prev = so.prev = s.ts_prev.ts_next = s;
-                s.next = s.ts_next = so;
-                so.seqst = false;
-                so.invis = so.play = true;
-
-                s.type = C.REST;
-                s.in_tuplet = null;
-                s.tp = null;
-                s.a_dd = null;
-                s.a_gch = null;
-                s.sls = null;
-
-                return s;
+                if (s == s_et)
+                    break;
             }
         }
+
+
+        // return an empty bar
+        // 回傳一個空柱
+        /* 字元數：434 */
+        VoiceItem _bar(VoiceItem s)
+        {
+            VoiceItem b = new VoiceItem();
+
+            b.type = C.BAR;
+            b.bar_type = "|";
+            b.fname = s.fname;
+            b.istart = s.istart;
+            b.iend = s.iend;
+            b.v = s.v;
+            b.p_v = s.p_v;
+            b.st = s.st;
+            b.dur = 0;
+            b.time = s.time + (s.dur != null ? s.dur : 0);
+            b.nhd = 0;
+            b.notes = new double[] { s.notes != null ? s.notes[0] : 22 };
+            b.seqst = true;
+            b.invis = true;
+            b.prev = s;
+            b.fmt = s.fmt;
+
+            return b;
+        }
+
+        // create an invisible bar for end of music lines
+        // 建立一個不可見的音樂線結尾欄
+        /* 字元數：447 */
+        VoiceItem add_end_bar(VoiceItem s)
+        {
+            VoiceItem b = _bar(s);
+            VoiceItem sn = s.ts_next;
+
+            b.wl = 0;
+            b.wr = 0;
+            b.ts_prev = s;
+            b.next = s.next;
+            b.ts_next = s.ts_next;
+            b.shrink = s.type == C.STBRK ? 0 : (s.wr + 3);
+
+            if (s.next != null)
+                s.next.prev = b;
+
+            s.ts_next.ts_prev = b;
+            s.next = s.ts_next = b;
+            b.space = sn.space * .9f - 3;
+
+            return b;
+        }
+
+        /* -- set the width and space of all symbols -- */
+        // this function is called once for the whole tune
+        // and once more for each new music line
+        /* -- 設定所有符號的寬度和間距 -- */
+        // 這個函數在整個曲調中被呼叫一次
+        // 對於每個新的音樂線再一次
+        /* 字元數：2228 */
+        void set_allsymwidth(bool first)
+        {
+            double val, st, s_chs, stup, itup;
+            VoiceItem s = tsfirst;
+            VoiceItem s2 = s;
+            double xa = 0;
+            double[] xl = new double[100];
+            double[] wr = new double[100];
+            double maxx = xa;
+            double tim = s.time;
+
+            while (true)
+            {
+                itup = 0;
+
+                do
+                {
+                    if ((s.a_gch != null || s.a_ly != null) && s_chs == null)
+                        s_chs = s;
+
+                    set_width(s);
+                    st = s.st;
+
+                    if (xl[st] == null)
+                        xl[st] = 0;
+
+                    if (wr[st] == null)
+                        wr[st] = 0;
+
+                    val = xl[st] + wr[st] + s.wl;
+
+                    if (val > maxx)
+                        maxx = val;
+
+                    if (s.dur != null && s.dur != s.notes[0].dur && first)
+                        itup = 1;
+
+                    s = s.ts_next;
+                } while (s != null && !s.seqst);
+
+                s2.shrink = maxx - xa;
+                s2.space = s2.ts_prev != null ? set_space(s2, tim) : 0;
+
+                if (s2.space == 0 && s2.ts_prev != null && s2.ts_prev.type == C.SPACE && s2.ts_prev.seqst)
+                    s2.space = s2.ts_prev.space /= 2;
+
+                if (itup != 0)
+                {
+                    if (stup == null)
+                        stup = s2;
+                }
+                else if (stup != null && stup.v == s2.v)
+                {
+                    set_sp_tup(stup, s2);
+                    stup = null;
+                }
+
+                if (s2.shrink == 0)
+                {
+                    if (s2.type == C.CLEF && !s2.ts_prev.bar_type)
+                    {
+                        s2.seqst = false;
+                        s2.time = tim;
+                    }
+                    else
+                    {
+                        s2.shrink = 10;
+                    }
+                }
+
+                tim = s2.time;
+
+                if (s == null)
+                    break;
+
+                s = s2;
+
+                do
+                {
+                    wr[s.st] = 0;
+                    s = s.ts_next;
+                } while (!s.seqst);
+
+                xa = maxx;
+
+                do
+                {
+                    st = s2.st;
+                    xl[st] = xa;
+
+                    if (s2.wr > wr[st])
+                        wr[st] = s2.wr;
+
+                    s2 = s2.ts_next;
+                } while (!s2.seqst);
+            }
+
+            if (stup != null)
+                set_sp_tup(stup, s2);
+
+            if (first && s_chs != null)
+                set_w_chs(s_chs);
+        }
+
+        // insert a rest, this one replacing a sequence or a measure
+        // 插入一個休止符，這個休止符會取代一個序列或一個小節
+        /* 字元數：473 */
+        VoiceItem to_rest(VoiceItem so)
+        {
+            VoiceItem s = (VoiceItem)so.Clone();
+
+            s.prev.next = so.ts_prev = so.prev = s.ts_prev.ts_next = s;
+            s.next = s.ts_next = so;
+            so.seqst = false;
+            so.invis = so.play = true;
+
+            s.type = C.REST;
+            s.in_tuplet = null;
+            s.tp = null;
+            s.a_dd = null;
+            s.a_gch = null;
+            s.sls = null;
+
+            return s;
+        }
+
 
 
 
         /*************************************/
 
 
-        double[] gene, staff_tb, nstaff, tsnext, realwidth, insert_meter, spf_last, smallest_duration;
-        double[] dx_tb = new double[] { 1.1f, 2.2f };
-        double[] hw_tb = new double[] { 1.1f, 2.2f };
-        double[] w_note = new double[] { 1.1f, 2.2f };
+        //double[] gene, staff_tb, nstaff, tsnext, realwidth, insert_meter, spf_last, smallest_duration;
+        //double[] dx_tb = new double[] { 1.1f, 2.2f };
+        //double[] hw_tb = new double[] { 1.1f, 2.2f };
+        //double[] w_note = new double[] { 1.1f, 2.2f };
 
         /* -- set the repeat sequences / measures -- */
         /* -- 設定重複序列/小節 -- */
@@ -1829,10 +1920,10 @@ namespace autocad_part2
             new_s.head = C.FULL;
             new_s.stem = s2.stem;
             new_s.nhd = s2.nhd;
-            new_s.notes = new Note[s2.notes.Length];
+            new_s.notes = new NoteItem[s2.notes.Length];
             for (i = 0; i < s2.notes.Length; i++)
             {
-                new_s.notes[i] = new Note
+                new_s.notes[i] = new NoteItem
                 {
                     pit = s2.notes[i].pit,
                     shhd = 0,
@@ -2289,6 +2380,8 @@ namespace autocad_part2
         /******************************************************************/
 
 
+        /* -- search where to cut the lines according to the staff width -- */
+        /* -- 依照五線譜寬度找出在哪裡剪線 -- */
         static void set_lines(object s, object next, object lwidth, object indent)
         {
             object first, s2, s3, s4, s5, x, xmin, xmid, xmax, wwidth, shrink, space, nlines, last = next ? next.ts_prev : null;
@@ -2443,6 +2536,8 @@ namespace autocad_part2
             return s;
         }
 
+        /* -- cut the tune into music lines -- */
+        /* -- 將曲調剪成音樂列 -- */
         static void cut_tune(object lwidth, object lsh)
         {
             object s2, i, mc, pg_sav = new { leftmargin = cfmt.leftmargin, rightmargin = cfmt.rightmargin, pagewidth = cfmt.pagewidth, scale = cfmt.scale };
@@ -2537,6 +2632,8 @@ namespace autocad_part2
             set_page();
         }
 
+        /* -- set the y values of some symbols -- */
+        /* -- 設定某些符號的 y 值 -- */
         static void set_yval(object s)
         {
             switch (s.type)
@@ -2596,14 +2693,20 @@ namespace autocad_part2
             }
         }
 
+        // set the pitch of the notes under an ottava sequence
+        // 設定 ottava 序列下音符的音高
         static void set_ottava()
         {
-            object s, s1, st, o, d, m = nstaff + 1;
+            VoiceItem s, s1;
+            object st;
+            int  o, d, m = nstaff + 1;
             var staff_d = new int[m];
 
-            void sym_ott(object s, object d)
+            void sym_ott(VoiceItem s, int d)
             {
-                object g, m, note;
+                VoiceItem g;
+                int m;
+                NoteItem note;
 
                 switch (s.type)
                 {
@@ -2630,7 +2733,7 @@ namespace autocad_part2
                                 for (m = 0; m <= g.nhd; m++)
                                 {
                                     note = g.notes[m];
-                                    if (note.opit == null)
+                                    if (note.opit == 0)
                                         note.opit = note.pit;
                                     note.pit += d;
                                 }
@@ -2640,9 +2743,9 @@ namespace autocad_part2
                 }
             }
 
-            void deco_rm(object s)
+            void deco_rm(VoiceItem s)
             {
-                for (var i = s.a_dd.Length; --i >= 0;)
+                for (int i = s.a_dd.Count; --i >= 0;)
                 {
                     if (s.a_dd[i].name.Match(/ 1?[85][vm][ab] /))
                         s.a_dd.splice(i, 1);
@@ -2700,6 +2803,8 @@ namespace autocad_part2
             }
         }
 
+        // expand the multi-rests as needed
+        // 依需要擴展多休息
         static void mrest_expand()
         {
             object s, s2;
@@ -2851,6 +2956,12 @@ namespace autocad_part2
             }
         }
 
+        /**
+         * set the clefs (treble or bass) in a 'auto clef' sequence
+        *  return the starting clef type
+         *  在「自動譜號」序列中設定譜號（高音或低音）
+         *  傳回起始譜號類型
+         */
         static void set_auto_clef(object st, object s_start, object clef_type_start)
         {
             object s, time, s2, s3, max = 12, min = 20;
@@ -2972,35 +3083,29 @@ namespace autocad_part2
             return clef_type_start
         }
 
-
-
-        /*****************************************************************/
-
-
-        private dynamic delta_tb = new
+        /* set the clefs */
+        /* this function is called once at start of tune generation */
+        /*
+         * global variables:
+         *	- staff_tb[st].clef = clefs at start of line (here, start of tune)
+         *				(created here, updated on clef draw)
+         *	- voice_tb[v].clef = clefs at end of generation
+         *				(created on voice creation, updated here)
+         */
+        /* 設定譜號 */
+        /* 此函數在曲調生成開始時呼叫一次 */
+        /*
+          * 全域變數：
+          * - Staff_tb[st].clef = 行首的譜號（這裡是樂曲的開始）
+          *（在此處創建，在譜號繪製上更新）
+          * - voice_tb[v].clef = 產生結束時的譜號
+          *（在語音創建時創建，此處更新）
+          */
+        public void set_clefs()
         {
-            t = 0 - 2 * 2,
-            c = 6 - 3 * 2,
-            b = 12 - 4 * 2,
-            p = 0 - 3 * 2
-        };
-        private int[][] rest_sp = new int[][]
-        {
-        new int[] { 18, 18 },
-        new int[] { 12, 18 },
-        new int[] { 12, 12 },
-        new int[] { 6, 12 },
-        new int[] { 6, 8 },
-        new int[] { 10, 10 },
-        new int[] { 6, 4 },
-        new int[] { 10, 0 },
-        new int[] { 10, 4 },
-        new int[] { 10, 10 }
-        };
-
-        public void SetClefs()
-        {
-            VoiceItem s, s2, st, v, p_voice, g, new_type, new_line, p_staff, pit;
+            VoiceItem s, s2;
+            int st, v, p_voice, g, new_type, new_line,  pit;
+            Staff p_staff;
             dynamic staff_clef = new dynamic[nstaff + 1];
             dynamic sy = cur_sy;
             dynamic mid = new dynamic[sy.nstaff + 1];
@@ -3160,7 +3265,44 @@ namespace autocad_part2
             }
         }
 
-        public void SetPitch(dynamic last_s)
+        /*****************************************************************/
+
+
+        /* set the pitch of the notes according to the clefs
+         * and set the vertical offset of the symbols */
+        /* this function is called at start of tune generation and
+         * then, once per music line up to the old sequence */
+        /* 根據譜號設定音符的音高
+          * 並設定符號的垂直偏移*/
+        /* 該函數在曲調生成開始時調用，並且
+          * 然後，每個音樂排列一次到舊序列 */
+        public (int t,int c,int b,int p) delta_tb =
+         (
+           t : 0 - 2 * 2,
+            c : 6 - 3 * 2,
+            b : 12 - 4 * 2,
+            p : 0 - 3 * 2
+        ) ;
+
+        /* upper and lower space needed by rests */
+        /* 休息所需的上下空間 */
+        int[,] rest_sp =
+        {
+    {18, 18},
+    {12, 18},
+    {12, 12},
+    {6, 12},
+    {6, 8},
+    {10, 10},			/* crotchet */
+    {6, 4},
+    {10, 0},
+    {10, 4},
+    {10, 10}
+};
+
+        // (possible hook)
+        //（可能的鉤子）
+        public void set_pitch(dynamic last_s)
         {
             VoiceItem s, s2, g, st, delta, pitch, note;
             dynamic dur = C.BLEN;
@@ -3281,7 +3423,13 @@ namespace autocad_part2
                 smallest_duration = dur;
         }
 
-        public void SetStemDir()
+        /* -- set the stem direction when multi-voices -- */
+        /* this function is called only once per tune */
+        // (possible hook)
+        /* -- 設定多聲部時的詞幹方向 -- */
+        /* 每個曲調只呼叫此函數一次 */
+        //（可能的鉤子）
+        public void set_stem_dir()
         {
             dynamic t, u, i, st, rvoice, v, v_st, st_v, vobj, v_st_tb, st_v_tb = new dynamic[nst + 1], s = tsfirst, sy = cur_sy, nst = sy.nstaff;
 
@@ -3439,6 +3587,10 @@ namespace autocad_part2
 
 
 
+        /* -- adjust the offset of the rests when many voices -- */
+        /* this function is called only once per tune */
+        /* -- 多聲部時調整休止符的偏移量 -- */
+        /* 每個曲調只呼叫此函數一次 */
         static void set_rest_offset()
         {
             int s, s2, v, end_time, not_alone, v_s, y, ymax, ymin,
@@ -3614,6 +3766,10 @@ namespace autocad_part2
         }
 
 
+        /* -- create a starting symbol -- */
+        // last_s = symbol at same time
+        /* -- 建立一個起始符號 -- */
+        // last_s = 同時符號
         public void NewSym(VoiceItem s, dynamic p_v, dynamic last_s)
         {
             s.p_v = p_v;
@@ -3636,6 +3792,8 @@ namespace autocad_part2
 
 
 
+        /* -- init the symbols at start of a music line -- */
+        /* -- 初始化音樂行開頭的符號 -- */
         static void init_music_line()
         {
             int p_voice, s, s1, s2, s3, last_s, v, st, shr, shrmx, shl,
@@ -3820,7 +3978,9 @@ namespace autocad_part2
         }
 
 
-        public void CheckEndBar()
+        // check if the tune ends on a measure bar
+        // 檢查曲調是否在小節欄上結束
+        public void check_end_bar()
         {
             dynamic s2, s = tsfirst;
             while (s.ts_next != null)
@@ -3838,17 +3998,25 @@ namespace autocad_part2
 
         /*******************************************************/
 
-        double[] dx_tb = new double[] { 1.1f, 2.2f };
-        double[] hw_tb = new double[] { 1.1f, 2.2f };
-        double[] w_note = new double[] { 1.1f, 2.2f };
+        //double[] dx_tb = new double[] { 1.1f, 2.2f };
+        //double[] hw_tb = new double[] { 1.1f, 2.2f };
+        //double[] w_note = new double[] { 1.1f, 2.2f };
 
-        var delta_tb = new { t = 0, c = 6, b = 12, p = -2 };
-        var rest_sp = new int[][] { new int[] { 18, 18 }, new int[] { 12, 18 }, new int[] { 12, 12 } };
-        var delpit = new int[] { 0, -7, -14, 0 };
-
-
+        //var delta_tb = new { t = 0, c = 6, b = 12, p = -2 };
+        //var rest_sp = new int[][] { new int[] { 18, 18 }, new int[] { 12, 18 }, new int[] { 12, 12 } };
+        //var delpit = new int[] { 0, -7, -14, 0 };
 
 
+
+
+        /* -- set a pitch in all symbols and the start/stop of the beams -- */
+        // and sort the pitches in the chords
+        // and build the chord symbols / annotations
+        // this function is called only once per tune
+        /* -- 設定所有符號的間距以及光束的開始/停止 -- */
+        //並對和弦中的音高進行排序
+        // 並建構和弦符號/註釋
+        // 每個曲調只呼叫此函數一次
         static void set_words(int p_voice)
         {
             int s2, n,
@@ -3957,8 +4125,8 @@ namespace autocad_part2
                 {
                     if (s.notes == null)
                     {
-                        s.notes = new Note[1];
-                        s.notes[0] = new Note();
+                        s.notes = new NoteItem[1];
+                        s.notes[0] = new NoteItem();
                         s.nhd = 0;
                     }
                     s.notes[0].pit = pitch;
@@ -3969,6 +4137,10 @@ namespace autocad_part2
                 lastnote.beam_end = true;
         }
 
+        /**
+         * -- set the end of the repeat sequences --
+         *  -- 設定重複序列的結尾 --  
+         */
         static void set_rb(int p_voice)
         {
             int s2, n,
@@ -4007,6 +4179,12 @@ namespace autocad_part2
                 }
             }
         }
+
+        /* -- initialize the generator -- */
+        // this function is called only once per tune
+        /* -- 初始化生成器 -- */
+        // 每個曲調只呼叫此函數一次
+        int[] delpit = new int[] { 0, -7, -14, 0 };
 
         static void set_global()
         {
@@ -4051,6 +4229,10 @@ namespace autocad_part2
             self.set_pitch(null);
         }
 
+        // get the left offsets of the first and other staff systems
+        // return [lsh1, lsho]
+        // 取得第一個和其他五線譜系統的左偏移量
+        // 返回 [lsh1, lsho]
         static int get_lshift()
         {
             int st, v, p_v, p1, po, fnt, w,
@@ -4125,6 +4307,8 @@ namespace autocad_part2
             return vnt == 2 ? lsh1 : lsho;
         }
 
+        /* -- return the left indentation of the staves -- */
+        /* -- 傳回五線譜的左側縮排 -- */
         static int set_indent(int lsh)
         {
             int st, v, w, p_voice, p, i, j, font,
@@ -4152,7 +4336,303 @@ namespace autocad_part2
         }
 
 
-        public void SetLeft(Symbol s)
+        /* -- decide on beams and on stem directions -- */
+        /* this routine is called only once per tune */
+        /* -- 決定樑和莖方向 -- */
+        /* 每首曲子只呼叫此例程一次 */
+        public void set_beams(object sym)
+        {
+            object s, t, g, beam, s_opp, n, m, mid_p, pu, pd,
+                laststem = -1;
+
+            for (s = sym; s != null; s = s.next)
+            {
+                if (s.type != C.NOTE)
+                {
+                    if (s.type != C.GRACE)
+                        continue;
+                    g = s.extra;
+                    if (g.stem == 2)
+                    {
+                        s_opp = s;
+                        continue;
+                    }
+                    if (s.stem == null)
+                        s.stem = s.multi ?? 1;
+                    for (; g != null; g = g.next)
+                    {
+                        g.stem = s.stem;
+                        g.multi = s.multi;
+                    }
+                    continue;
+                }
+
+                if (s.stem == null && s.multi != null)
+                    s.stem = s.multi;
+                if (s.stem == null)
+                {
+                    mid_p = s.mid / 3 + 18;
+
+                    if (beam != null)
+                    {
+                        s.stem = laststem;
+                    }
+                    else if (s.beam_st != null && !s.beam_end)
+                    {
+                        beam = true;
+
+                        pu = s.notes[s.nhd].pit;
+                        pd = s.notes[0].pit;
+                        for (g = s.next; g != null; g = g.next)
+                        {
+                            if (g.type != C.NOTE)
+                                continue;
+                            if (g.stem != null || g.multi != null)
+                                s.stem = g.stem ?? g.multi;
+                            if (g.notes[g.nhd].pit > pu)
+                                pu = g.notes[g.nhd].pit;
+                            if (g.notes[0].pit < pd)
+                                pd = g.notes[0].pit;
+                            if (g.beam_end)
+                                break;
+                        }
+                        if (s.stem == null && g.beam_end != null)
+                        {
+                            if (pu + pd < mid_p * 2)
+                            {
+                                s.stem = 1;
+                            }
+                            else if (pu + pd > mid_p * 2)
+                            {
+                                s.stem = -1;
+                            }
+                            else
+                            {
+                                if (s.fmt.bstemdown)
+                                    s.stem = -1;
+                            }
+                        }
+                        if (s.stem == null)
+                            s.stem = laststem;
+                    }
+                    else
+                    {
+                        n = (s.notes[s.nhd].pit + s.notes[0].pit) / 2;
+                        if (n == mid_p && s.nhd > 1)
+                        {
+                            for (m = 0; m < s.nhd; m++)
+                            {
+                                if (s.notes[m].pit >= mid_p)
+                                    break;
+                            }
+                            n = m * 2 < s.nhd ? mid_p - 1 : mid_p + 1;
+                        }
+                        if (n < mid_p)
+                            s.stem = 1;
+                        else if (n > mid_p || s.fmt.bstemdown)
+                            s.stem = -1;
+                        else
+                            s.stem = laststem;
+                    }
+                }
+                else
+                {
+                    if (s.beam_st != null && !s.beam_end)
+                        beam = true;
+                }
+                if (s.beam_end != null)
+                    beam = false;
+                laststem = s.stem;
+
+                if (s_opp != null)
+                {
+                    for (g = s_opp.extra; g != null; g = g.next)
+                        g.stem = -laststem;
+                    s_opp.stem = -laststem;
+                    s_opp = null;
+                }
+            }
+        }
+
+        // check if there may be one head for unison when voice overlap
+        // 檢查語音重疊時是否有一個頭可以齊聲
+        public bool same_head(object s1, object s2)
+        {
+            object i1, i2, l1, l2, head, i11, i12, i21, i22, sh1, sh2,
+                shu = s1.fmt.shiftunison ?? 0;
+
+            if (shu >= 3)
+                return false;
+            if ((l1 = s1.dur) >= C.BLEN)
+                return false;
+            if ((l2 = s2.dur) >= C.BLEN)
+                return false;
+            if (s1.stemless != null && s2.stemless != null)
+                return false;
+            if (s1.dots != s2.dots)
+            {
+                if (shu & 1
+                    || s1.dots * s2.dots != 0)
+                    return false;
+            }
+            if (s1.stem * s2.stem > 0)
+                return false;
+
+            i1 = i2 = 0;
+            if (s1.notes[0].pit > s2.notes[0].pit)
+            {
+                if (s1.stem < 0)
+                    return false;
+                while (s2.notes[i2].pit != s1.notes[0].pit)
+                {
+                    if (++i2 > s2.nhd)
+                        return false;
+                }
+            }
+            else if (s1.notes[0].pit < s2.notes[0].pit)
+            {
+                if (s2.stem < 0)
+                    return false;
+                while (s2.notes[0].pit != s1.notes[i1].pit)
+                {
+                    if (++i1 > s1.nhd)
+                        return false;
+                }
+            }
+            if (s2.notes[i2].acc != s1.notes[i1].acc)
+                return false;
+            i11 = i1;
+            i21 = i2;
+            sh1 = s1.notes[i1].shhd;
+            sh2 = s2.notes[i2].shhd;
+            do
+            {
+                i1++;
+                i2++;
+                if (i1 > s1.nhd)
+                {
+                    break;
+                }
+                if (i2 > s2.nhd)
+                {
+                    break;
+                }
+                if (s2.notes[i2].acc != s1.notes[i1].acc)
+                    return false;
+                if (sh1 < s1.notes[i1].shhd)
+                    sh1 = s1.notes[i1].shhd;
+                if (sh2 < s2.notes[i2].shhd)
+                    sh2 = s2.notes[i2].shhd;
+            } while (s2.notes[i2].pit == s1.notes[i1].pit);
+            if (i1 <= s1.nhd)
+            {
+                if (i2 <= s2.nhd)
+                    return false;
+                if (s2.stem > 0)
+                    return false;
+            }
+            else if (i2 <= s2.nhd)
+            {
+                if (s1.stem > 0)
+                    return false;
+            }
+            i12 = i1;
+            i22 = i2;
+
+            head = 0;
+            if (l1 != l2)
+            {
+                if (l1 < l2)
+                {
+                    l1 = l2;
+                    l2 = s1.dur;
+                }
+                if (l1 < C.BLEN / 2)
+                {
+                    if (s2.dots != null)
+                        head = 2;
+                    else if (s1.dots != null)
+                        head = 1;
+                }
+                else if (l2 < C.BLEN / 4)
+                {
+                    if (shu == 2)
+                        return false;
+                    head = s2.dur >= C.BLEN / 2 ? 2 : 1;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            if (head == 0)
+                head = s1.p_v.scale < s2.p_v.scale ? 2 : 1;
+            if (head == 1)
+            {
+                for (i2 = i21; i2 < i22; i2++)
+                {
+                    s2.notes[i2].invis = true;
+                    s2.notes[i2].acc = null;
+                }
+                for (i2 = 0; i2 <= s2.nhd; i2++)
+                    s2.notes[i2].shhd += sh1;
+            }
+            else
+            {
+                for (i1 = i11; i1 < i12; i1++)
+                {
+                    s1.notes[i1].invis = true;
+                    s1.notes[i1].acc = null;
+                }
+                for (i1 = 0; i1 <= s1.nhd; i1++)
+                    s1.notes[i1].shhd += sh2;
+            }
+            return true;
+        }
+
+        /* handle unison with different accidentals */
+        /* 處理不同記號的同音 */
+        public void unison_acc(object s1, object s2, object i1, object i2)
+        {
+            object m, d, acc;
+
+            acc = s2.notes[i2].acc;
+            if (acc == null)
+            {
+                d = w_note[s2.head] * 2 + s2.xmx + s1.notes[i1].shac + 2;
+                acc = s1.notes[i1].acc;
+                if (acc is object)  // microtone
+                    d += 2;
+                if (s2.dots != null)
+                    d += 6;
+                for (m = 0; m <= s1.nhd; m++)
+                {
+                    s1.notes[m].shhd += d;
+                    s1.notes[m].shac -= d;
+                }
+                s1.xmx += d;
+            }
+            else
+            {
+                d = w_note[s1.head] * 2 + s1.xmx + s2.notes[i2].shac + 2;
+                if (acc is object)  // microtone
+                    d += 2;
+                if (s1.dots != null)
+                    d += 6;
+                for (m = 0; m <= s2.nhd; m++)
+                {
+                    s2.notes[m].shhd += d;
+                    s2.notes[m].shac -= d;
+                }
+                s2.xmx += d;
+            }
+        }
+
+        const int MAXPIT = 48 * 2;
+
+        /* set the left space of a note/chord */
+        /* 設定音符/和弦的左側空間 */
+        public void set_left(Symbol s)
         {
             int m;
             int i;
@@ -4228,7 +4708,9 @@ namespace autocad_part2
             return left;
         }
 
-        public void SetRight(Symbol s)
+        /* set the right space of a note/chord */
+        /* 設定音符/和弦的右側空間 */
+        public void set_right(Symbol s)
         {
             int m;
             int i;
@@ -4344,10 +4826,14 @@ namespace autocad_part2
         }
 
 
+        /* -- shift the notes horizontally when voices overlap -- */
+        /* this routine is called only once per tune */
+        /* -- 當聲音重疊時水平移動音符 -- */
+        /* 每首曲子只呼叫此例程一次 */
         private void set_overlap()
         {
             VoiceItem s, s1, s2, s3;
-            int i, i1, i2, m, sd, t, dp, d, d2, dr, dr2,  left1, right1, left2, right2, right3, pl, pr;
+            int i, i1, i2, m, sd, t, dp, d, d2, dr, dr2, left1, right1, left2, right2, right3, pl, pr;
             double dx;
             VoiceStavesSymbols sy = cur_sy;
 
@@ -4760,50 +5246,30 @@ namespace autocad_part2
         }
 
 
-
-
-
-        /********************************************************/
-
-        private const int MAXPIT = 48 * 2;
-
-        private List<Symbol> voice_tb;
-        private Symbol tsfirst;
-        private int posy;
-        private int blkdiv;
-        private int img;
-        private int cfmt;
-        private int posx;
-
-        public void SetStems()
+        /* -- set the stem height -- */
+        /* this routine is called only once per tune */
+        // (possible hook)
+        /* -- 設定莖高度 -- */
+        /* 每首曲子只呼叫此例程一次 */
+        //（可能的鉤子）
+        void set_stems()
         {
-            Symbol s;
-            Symbol s2;
-            Symbol g;
-            int slen;
-            int scale;
-            int ymn;
-            int ymx;
-            int nflags;
-            int ymin;
-            int ymax;
+            VoiceItem s, s2;
+            double g, slen, nflags, ymin, ymax;
+            double scale, ymn, ymx;
 
             for (s = tsfirst; s != null; s = s.ts_next)
             {
                 if (s.type != C.NOTE)
                 {
                     if (s.type != C.GRACE)
-                    {
                         continue;
-                    }
                     ymin = ymax = s.mid;
                     for (g = s.extra; g != null; g = g.next)
                     {
                         slen = GSTEM;
                         if (g.nflags > 1)
-                        {
                             slen += 1.2 * (g.nflags - 1);
-                        }
                         ymn = 3 * (g.notes[0].pit - 18);
                         ymx = 3 * (g.notes[g.nhd].pit - 18);
                         if (s.stem >= 0)
@@ -4821,13 +5287,9 @@ namespace autocad_part2
                         ymx += 4;
                         ymn -= 4;
                         if (ymn < ymin)
-                        {
                             ymin = ymn;
-                        }
                         else if (ymx > ymax)
-                        {
                             ymax = ymx;
-                        }
                         g.ymx = ymx;
                         g.ymn = ymn;
                     }
@@ -4835,70 +5297,52 @@ namespace autocad_part2
                     s.ymn = ymin;
                     continue;
                 }
+                /* shift notes in chords (need stem direction to do this) */
+                set_head_shift(s);
 
-                SetHeadShift(s);
-
+                /* if start or end of beam, adjust the number of flags
+                 * with the other end */
                 nflags = s.nflags;
                 if (s.beam_st && !s.beam_end)
                 {
                     if (s.feathered_beam)
-                    {
                         nflags = ++s.nflags;
-                    }
-                    for (s2 = s.next; s2 != null; s2 = s2.next)
+                    for (s2 = s.next; /*s2*/; s2 = s2.next)
                     {
                         if (s2.type == C.NOTE)
                         {
                             if (s.feathered_beam)
-                            {
                                 s2.nflags++;
-                            }
                             if (s2.beam_end)
-                            {
                                 break;
-                            }
                         }
                     }
-                    if (s2.nflags > nflags)
-                    {
+                    /*			if (s2) */
+                    if (s2 != null && s2.nflags > nflags)
                         nflags = s2.nflags;
-                    }
                 }
-                else if (!s.beam_st && s.beam_end)
-                {
+                else if (!s.beam_st && s.beam_end){
+                    //fixme: keep the start of beam ?
                     for (s2 = s.prev; s2 != null; s2 = s2.prev)
                     {
                         if (s2.beam_st)
-                        {
                             break;
-                        }
                     }
-                    if (s2.nflags > nflags)
-                    {
+                    if (s2 != null && s2.nflags > nflags)
                         nflags = s2.nflags;
-                    }
                 }
 
+                /* set height of stem end */
                 slen = s.fmt.stemheight;
                 switch (nflags)
                 {
-                    case 2:
-                        slen += 0;
-                        break;
-                    case 3:
-                        slen += 4;
-                        break;
-                    case 4:
-                        slen += 8;
-                        break;
-                    case 5:
-                        slen += 12;
-                        break;
+                    case 2: slen += 0; break;
+                    case 3: slen += 4; break;
+                    case 4: slen += 8; break;
+                    case 5: slen += 12; break;
                 }
                 if ((scale = s.p_v.scale) != 1)
-                {
-                    slen *= (scale + 1) * .5;
-                }
+                    slen *= (scale + 1) * 0.5;
                 ymn = 3 * (s.notes[0].pit - 18);
                 if (s.nhd > 0)
                 {
@@ -4910,9 +5354,7 @@ namespace autocad_part2
                     ymx = ymn;
                 }
                 if (s.ntrem)
-                {
-                    slen += 2 * s.ntrem;
-                }
+                    slen += 2 * s.ntrem; // tremolo
                 if (s.stemless)
                 {
                     if (s.stem >= 0)
@@ -4934,50 +5376,57 @@ namespace autocad_part2
                     {
                         slen -= 2;
                         if (s.notes[s.nhd].pit > 28)
-                        {
                             slen -= 2;
-                        }
                     }
                     s.y = ymn;
                     if (s.notes[0].tie)
-                    {
                         ymn -= 3;
-                    }
                     s.ymn = ymn - 4;
                     s.ys = ymx + slen;
                     if (s.ys < s.mid)
-                    {
                         s.ys = s.mid;
-                    }
                     s.ymx = (s.ys + 2.5) | 0;
                 }
                 else
-                {
+                {       /* stem down */
                     if (s.notes[0].pit < 18 && (nflags <= 0 || !s.beam_st || !s.beam_end))
                     {
                         slen -= 2;
                         if (s.notes[0].pit < 16)
-                        {
                             slen -= 2;
-                        }
                     }
                     s.ys = ymn - slen;
                     if (s.ys > s.mid)
-                    {
                         s.ys = s.mid;
-                    }
                     s.ymn = (s.ys - 2.5) | 0;
                     s.y = ymx;
+                    /*fixme:the tie may be lower*/
                     if (s.notes[s.nhd].tie)
-                    {
                         ymx += 3;
-                    }
                     s.ymx = ymx + 4;
                 }
             }
         }
 
-        public void BlockGen(Symbol s)
+
+        List<VoiceItem> blocks = new List<VoiceItem>(); // array of delayed block symbols
+
+        /********************************************************/
+
+        //private const int MAXPIT = 48 * 2;
+
+        //private List<Symbol> voice_tb;
+        //private Symbol tsfirst;
+        //private int posy;
+        //private int blkdiv;
+        //private int img;
+        //private int cfmt;
+        //private int posx;
+
+
+        // (possible hook)
+        //（可能的鉤子）
+        public void block_gen(VoiceItem s)
         {
             switch (s.subtype)
             {
@@ -5078,7 +5527,9 @@ namespace autocad_part2
             }
         }
 
-        public void SymStaffMove(int st)
+        // -- move some symbols of an empty staff to the next one --
+        // -- 將空五線譜的一些符號移到下一個 --
+        public void sym_staff_move(int st)
         {
             for (var s = tsfirst; s != null; s = s.ts_next)
             {
@@ -5098,9 +5549,14 @@ namespace autocad_part2
         }
 
 
-        private void set_piece()
+        /* -- define the start and end of a piece of tune -- */
+        /* tsnext becomes the beginning of the next line */
+        /* -- 定義一段曲子的開始與結束 -- */
+        /* tsnext 成為下一行的開頭 */
+        public void set_piece()
         {
-            VoiceItem s, last, p_voice, st, v, nv, tmp, non_empty, non_empty_gl = new List<bool>(), sy = cur_sy;
+            VoiceItem s, last;
+            int p_voice, st, v, nv, tmp, non_empty, non_empty_gl = new List<bool>(), sy = cur_sy;
 
             void reset_staff(st)
             {
@@ -5153,7 +5609,8 @@ namespace autocad_part2
             // set the top and bottom of the staves
             void set_top_bot()
             {
-                dynamic st, p_staff, i, j, l;
+                Staff p_staff;
+                    int st,i, j, l;
 
                 for (st = 0; st <= nstaff; st++)
                 {
@@ -5405,6 +5862,10 @@ namespace autocad_part2
         }
 
 
+        /* -- position the symbols along the staff -- */
+        // (possible hook)
+        /* -- 沿著五線譜放置符號 -- */
+        //（可能的鉤子）
         public void set_sym_glue(double width)
         {
             VoiceItem s, g, ll, x, some_grace,
@@ -5564,7 +6025,9 @@ namespace autocad_part2
             }
         }
 
-        public void SetSymLine()
+        // set the starting symbols of the voices for the new music line
+        // 設定新音樂線的聲音起始符號
+        public void set_sym_line()
         {
             Symbol p_v;
             Symbol s;
@@ -5598,12 +6061,18 @@ namespace autocad_part2
         }
 
 
+        // set the left offset the images
+        // 設定影像的左偏移量
         public void set_posx()
         {
             posx = img.lm / cfmt.scale;
         }
 
-        public void GenInit()
+        // initialize the start of generation / new music line
+        // and output the inter-staff blocks if any
+        // 初始化產生開始/新音樂線
+        // 並輸出內部人員區塊（如果有）
+        public void gen_init()
         {
             Symbol s = tsfirst;
             int tim = s.time;
@@ -5633,7 +6102,7 @@ namespace autocad_part2
                         {
                             continue;
                         }
-                        BlockGen(s);
+                        block_gen(s);
                         break;
                 }
                 unlksym(s);
@@ -5646,333 +6115,50 @@ namespace autocad_part2
         }
 
 
-
-
-
-
         /**************************************/
 
-        public double[] dx_tb = new double[] { 1.1f, 2.2f };
-        public double[] hw_tb = new double[] { 1.1f, 2.2f };
-        public double[] w_note = new double[] { 1.1f, 2.2f };
+        //    public double[] dx_tb = new double[] { 1.1f, 2.2f };
+        //    public double[] hw_tb = new double[] { 1.1f, 2.2f };
+        //    public double[] w_note = new double[] { 1.1f, 2.2f };
 
-        public Dictionary<string, int> delta_tb = new Dictionary<string, int>()
-    {
-        { "t", 0 },
-        { "c", 6 },
-        { "b", 12 },
-        { "p", -2 }
-    };
+        //    public Dictionary<string, int> delta_tb = new Dictionary<string, int>()
+        //{
+        //    { "t", 0 },
+        //    { "c", 6 },
+        //    { "b", 12 },
+        //    { "p", -2 }
+        //};
 
-        public List<List<int>> rest_sp = new List<List<int>>()
-    {
-        new List<int> { 18, 18 },
-        new List<int> { 12, 18 },
-        new List<int> { 12, 12 }
-    };
+        //    public List<List<int>> rest_sp = new List<List<int>>()
+        //{
+        //    new List<int> { 18, 18 },
+        //    new List<int> { 12, 18 },
+        //    new List<int> { 12, 12 }
+        //};
 
-        public const int MAXPIT = 48 * 2;
-        public List<object> blocks = new List<object>();
+        //    public const int MAXPIT = 48 * 2;
+        //    public List<object> blocks = new List<object>();
 
-        public int slurePos = 0;
+        //    public int slurePos = 0;
 
-        public void SetBeams(object sym)
-        {
-            object s, t, g, beam, s_opp, n, m, mid_p, pu, pd,
-                laststem = -1;
 
-            for (s = sym; s != null; s = s.next)
-            {
-                if (s.type != C.NOTE)
-                {
-                    if (s.type != C.GRACE)
-                        continue;
-                    g = s.extra;
-                    if (g.stem == 2)
-                    {
-                        s_opp = s;
-                        continue;
-                    }
-                    if (s.stem == null)
-                        s.stem = s.multi ?? 1;
-                    for (; g != null; g = g.next)
-                    {
-                        g.stem = s.stem;
-                        g.multi = s.multi;
-                    }
-                    continue;
-                }
-
-                if (s.stem == null && s.multi != null)
-                    s.stem = s.multi;
-                if (s.stem == null)
-                {
-                    mid_p = s.mid / 3 + 18;
-
-                    if (beam != null)
-                    {
-                        s.stem = laststem;
-                    }
-                    else if (s.beam_st != null && !s.beam_end)
-                    {
-                        beam = true;
-
-                        pu = s.notes[s.nhd].pit;
-                        pd = s.notes[0].pit;
-                        for (g = s.next; g != null; g = g.next)
-                        {
-                            if (g.type != C.NOTE)
-                                continue;
-                            if (g.stem != null || g.multi != null)
-                                s.stem = g.stem ?? g.multi;
-                            if (g.notes[g.nhd].pit > pu)
-                                pu = g.notes[g.nhd].pit;
-                            if (g.notes[0].pit < pd)
-                                pd = g.notes[0].pit;
-                            if (g.beam_end)
-                                break;
-                        }
-                        if (s.stem == null && g.beam_end != null)
-                        {
-                            if (pu + pd < mid_p * 2)
-                            {
-                                s.stem = 1;
-                            }
-                            else if (pu + pd > mid_p * 2)
-                            {
-                                s.stem = -1;
-                            }
-                            else
-                            {
-                                if (s.fmt.bstemdown)
-                                    s.stem = -1;
-                            }
-                        }
-                        if (s.stem == null)
-                            s.stem = laststem;
-                    }
-                    else
-                    {
-                        n = (s.notes[s.nhd].pit + s.notes[0].pit) / 2;
-                        if (n == mid_p && s.nhd > 1)
-                        {
-                            for (m = 0; m < s.nhd; m++)
-                            {
-                                if (s.notes[m].pit >= mid_p)
-                                    break;
-                            }
-                            n = m * 2 < s.nhd ? mid_p - 1 : mid_p + 1;
-                        }
-                        if (n < mid_p)
-                            s.stem = 1;
-                        else if (n > mid_p || s.fmt.bstemdown)
-                            s.stem = -1;
-                        else
-                            s.stem = laststem;
-                    }
-                }
-                else
-                {
-                    if (s.beam_st != null && !s.beam_end)
-                        beam = true;
-                }
-                if (s.beam_end != null)
-                    beam = false;
-                laststem = s.stem;
-
-                if (s_opp != null)
-                {
-                    for (g = s_opp.extra; g != null; g = g.next)
-                        g.stem = -laststem;
-                    s_opp.stem = -laststem;
-                    s_opp = null;
-                }
-            }
-        }
-
-        public bool SameHead(object s1, object s2)
-        {
-            object i1, i2, l1, l2, head, i11, i12, i21, i22, sh1, sh2,
-                shu = s1.fmt.shiftunison ?? 0;
-
-            if (shu >= 3)
-                return false;
-            if ((l1 = s1.dur) >= C.BLEN)
-                return false;
-            if ((l2 = s2.dur) >= C.BLEN)
-                return false;
-            if (s1.stemless != null && s2.stemless != null)
-                return false;
-            if (s1.dots != s2.dots)
-            {
-                if (shu & 1
-                    || s1.dots * s2.dots != 0)
-                    return false;
-            }
-            if (s1.stem * s2.stem > 0)
-                return false;
-
-            i1 = i2 = 0;
-            if (s1.notes[0].pit > s2.notes[0].pit)
-            {
-                if (s1.stem < 0)
-                    return false;
-                while (s2.notes[i2].pit != s1.notes[0].pit)
-                {
-                    if (++i2 > s2.nhd)
-                        return false;
-                }
-            }
-            else if (s1.notes[0].pit < s2.notes[0].pit)
-            {
-                if (s2.stem < 0)
-                    return false;
-                while (s2.notes[0].pit != s1.notes[i1].pit)
-                {
-                    if (++i1 > s1.nhd)
-                        return false;
-                }
-            }
-            if (s2.notes[i2].acc != s1.notes[i1].acc)
-                return false;
-            i11 = i1;
-            i21 = i2;
-            sh1 = s1.notes[i1].shhd;
-            sh2 = s2.notes[i2].shhd;
-            do
-            {
-                i1++;
-                i2++;
-                if (i1 > s1.nhd)
-                {
-                    break;
-                }
-                if (i2 > s2.nhd)
-                {
-                    break;
-                }
-                if (s2.notes[i2].acc != s1.notes[i1].acc)
-                    return false;
-                if (sh1 < s1.notes[i1].shhd)
-                    sh1 = s1.notes[i1].shhd;
-                if (sh2 < s2.notes[i2].shhd)
-                    sh2 = s2.notes[i2].shhd;
-            } while (s2.notes[i2].pit == s1.notes[i1].pit);
-            if (i1 <= s1.nhd)
-            {
-                if (i2 <= s2.nhd)
-                    return false;
-                if (s2.stem > 0)
-                    return false;
-            }
-            else if (i2 <= s2.nhd)
-            {
-                if (s1.stem > 0)
-                    return false;
-            }
-            i12 = i1;
-            i22 = i2;
-
-            head = 0;
-            if (l1 != l2)
-            {
-                if (l1 < l2)
-                {
-                    l1 = l2;
-                    l2 = s1.dur;
-                }
-                if (l1 < C.BLEN / 2)
-                {
-                    if (s2.dots != null)
-                        head = 2;
-                    else if (s1.dots != null)
-                        head = 1;
-                }
-                else if (l2 < C.BLEN / 4)
-                {
-                    if (shu == 2)
-                        return false;
-                    head = s2.dur >= C.BLEN / 2 ? 2 : 1;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            if (head == 0)
-                head = s1.p_v.scale < s2.p_v.scale ? 2 : 1;
-            if (head == 1)
-            {
-                for (i2 = i21; i2 < i22; i2++)
-                {
-                    s2.notes[i2].invis = true;
-                    s2.notes[i2].acc = null;
-                }
-                for (i2 = 0; i2 <= s2.nhd; i2++)
-                    s2.notes[i2].shhd += sh1;
-            }
-            else
-            {
-                for (i1 = i11; i1 < i12; i1++)
-                {
-                    s1.notes[i1].invis = true;
-                    s1.notes[i1].acc = null;
-                }
-                for (i1 = 0; i1 <= s1.nhd; i1++)
-                    s1.notes[i1].shhd += sh2;
-            }
-            return true;
-        }
-
-        public void UnisonAcc(object s1, object s2, object i1, object i2)
-        {
-            object m, d, acc;
-
-            acc = s2.notes[i2].acc;
-            if (acc == null)
-            {
-                d = w_note[s2.head] * 2 + s2.xmx + s1.notes[i1].shac + 2;
-                acc = s1.notes[i1].acc;
-                if (acc is object)  // microtone
-                    d += 2;
-                if (s2.dots != null)
-                    d += 6;
-                for (m = 0; m <= s1.nhd; m++)
-                {
-                    s1.notes[m].shhd += d;
-                    s1.notes[m].shac -= d;
-                }
-                s1.xmx += d;
-            }
-            else
-            {
-                d = w_note[s1.head] * 2 + s1.xmx + s2.notes[i2].shac + 2;
-                if (acc is object)  // microtone
-                    d += 2;
-                if (s1.dots != null)
-                    d += 6;
-                for (m = 0; m <= s2.nhd; m++)
-                {
-                    s2.notes[m].shhd += d;
-                    s2.notes[m].shac -= d;
-                }
-                s2.xmx += d;
-            }
-        }
-
-        public void OutputMusic()
+        /* -- generate the music -- */
+        // (possible hook)
+        /* -- 生成音樂 -- */
+        //（可能的鉤子）
+        public void output_music()
         {
             int v, lwidth, indent, lsh, line_height, ts1st, tslast, p_v;
             int nv = voice_tb.Length;
 
             SetGlobal();
             if (nv > 1)
-                SetStemDir();
+                set_stem_dir();
 
             for (v = 0; v < nv; v++)
                 SetBeams(voice_tb[v].sym);
 
-            SetStems();
+            set_stems();
 
             SetAccShft();
             if (nv > 1)
@@ -6000,7 +6186,7 @@ namespace autocad_part2
                 CutTune(lwidth, lsh);
             }
 
-            GenInit();
+            gen_init();
             if (tsfirst == null)
                 return;
 
@@ -6011,7 +6197,7 @@ namespace autocad_part2
 
             spf_last = 0;
 
-            SetAllSls();
+            set_all_sls();
             while (true)
             {
                 SetPiece();
@@ -6024,10 +6210,10 @@ namespace autocad_part2
                     if (indent != 0)
                         posx += indent;
 
-                    DrawSymNear();
-                    line_height = SetStaff();
+                    draw_sym_near();
+                    line_height = set_staff();
                     DrawSystems(indent);
-                    DrawAllSym();
+                    draw_all_sym();
                     DelayedUpdate();
                     if (output)
                         Vskip(line_height);
@@ -6043,12 +6229,12 @@ namespace autocad_part2
                     break;
                 tsnext.ts_prev.ts_next = tsfirst = tsnext;
 
-                GenInit();
+                gen_init();
                 if (tsfirst == null)
                     break;
                 tslast = tsfirst.ts_prev;
                 tsfirst.ts_prev = null;
-                SetSymLine();
+                set_sym_line();
                 lwidth = GetLWidth();
             }
 
@@ -6063,9 +6249,13 @@ namespace autocad_part2
             }
         }
 
-        public void SetAllSls()
+
+        int slurePos = 0;
+
+        public void set_all_sls()
         {
-            int p_voice, v, s,
+            VoiceItem s;
+            int p_voice, v,
                 n = voice_tb.Length;
             for (v = 0; v < n; v++)
             {
@@ -6076,10 +6266,10 @@ namespace autocad_part2
                     {
                         if (s.sls != null)
                         {
-                            foreach (var the in s.sls)
+                            foreach (SlurGroup the in s.sls)
                             {
-                                var sst = the.ss;
-                                var send = the.se;
+                                VoiceItem sst = the.ss;
+                                VoiceItem send = the.se;
                                 slurePos++;
                                 if (sst.slurStart == null) sst.slurStart = new List<int>();
                                 sst.slurStart.Add(slurePos);
@@ -6091,14 +6281,6 @@ namespace autocad_part2
                 }
             }
         }
-
-
-
-
-
-
-
-
 
 
 

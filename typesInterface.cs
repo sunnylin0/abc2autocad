@@ -158,10 +158,10 @@ namespace autocad_part2
         bool stemless { get; set; }
         int shrink { get; set; }
         double space { get; set; }
-        List<(int ty, VoiceItem ss, VoiceItem se)> sls { get; set; }
+        List<SlurGroup> sls { get; set; }
         //{ int ty, voiceitem ss, voiceitem se} sls { get; set; }
-        List<int> slurstart { get; set; }
-        List<int> slurend { get; set; }
+        List<int> slurStart { get; set; }
+        List<int> slurEnd { get; set; }
         bool soln { get; set; }
         bool nl { get; set; }
         int repeat_n { get; set; }
