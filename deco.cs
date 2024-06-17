@@ -56,80 +56,76 @@ using System.Text;
 // }
 
 
-
-
-
-
 namespace autocad_part2
 {
     partial class Abc
     {
- 
-
-    public class Symbol
-    {
-        public int type;
-        public int nhd;
-        public int stem;
-        public int head;
-        public int x;
-        public int y;
-        public int ymx;
-        public int ymn;
-        public bool bar_dotted;
-        public bool ottava;
-        public bool beam_on;
-        public bool trem2;
-        public bool beam_end;
-        public bool beam_st;
-        public bool xstem;
-        public bool beam_br1;
-        public bool beam_br2;
-        public bool rbstop;
-        public bool trem1;
-        public bool stemless;
-        public int rbend;
-        public List<NoteItem> notes;
-        public List<int> ottava;
-        public List<DecorationItem> a_dd;
-        public int feathered_beam;
-        public int rbstop;
-        public int ntrem;
-        public int rbend;
-        public int[] acc;
-        public string color;
-        public bool invis;
-    }
 
 
+        public class Symbolxx
+        {
+            public int type;
+            public int nhd;
+            public int stem;
+            public int head;
+            public int x;
+            public int y;
+            public int ymx;
+            public int ymn;
+            public bool bar_dotted;
+            public bool ottava;
+            public bool beam_on;
+            public bool trem2;
+            public bool beam_end;
+            public bool beam_st;
+            public bool xstem;
+            public bool beam_br1;
+            public bool beam_br2;
+            public bool rbstop;
+            public bool trem1;
+            public bool stemless;
+            public int rbend;
+            public List<NoteItem> notes;
+            public List<int> ottava;
+            public List<DecorationDef> a_dd;
+            public int feathered_beam;
+            public int rbstop;
+            public int ntrem;
+            public int rbend;
+            public int[] acc;
+            public string color;
+            public bool invis;
+        }
 
-    public class Decorationxxx
-    {
-        public string name;
-        public int func;
-        public string glyph;
-        public int h;
-        public int hd;
-        public double wl;
-        public double wr;
-        public int dx;
-        public int dy;
-        public string str;
-        public string ty;
-        public int x;
-        public int y;
-        public bool inv;
-        public bool has_val;
-        public int val;
-        public Decoration dd_en;
-        public Decoration dd_st;
-    }
 
-        Dictionary<string, DecorationItem> dd_tb = new Dictionary<string, DecorationItem>();   // definition of the decorations
-        List<DecorationItem> a_de = new List<DecorationItem>();              // array of the decoration elements
-        Dictionary<string, NoteItem> cross = new Dictionary<string, NoteItem>();     // cross voice decorations
-                                                                             // decorations - populate with standard decorations
-                                                                             // 裝飾 - 用標準裝飾填充
+
+        public class Decorationxxx
+        {
+            public string name;
+            public int func;
+            public string glyph;
+            public int h;
+            public int hd;
+            public double wl;
+            public double wr;
+            public int dx;
+            public int dy;
+            public string str;
+            public string ty;
+            public int x;
+            public int y;
+            public bool inv;
+            public bool has_val;
+            public int val;
+            public Decoration dd_en;
+            public Decoration dd_st;
+        }
+
+        public Dictionary<string, DecorationDef> dd_tb = new Dictionary<string, DecorationDef>();   // definition of the decorations
+        public List<DecorationElement> a_de = new List<DecorationElement>();              // array of the decoration elements
+        public Dictionary<string, NoteItem> cross = new Dictionary<string, NoteItem>();     // cross voice decorations
+                                                                                     // decorations - populate with standard decorations
+                                                                                     // 裝飾 - 用標準裝飾填充
         public static Dictionary<string, string> decos = new Dictionary<string, string>() {
         { "dot", "0 stc 6 1.5 1" },
         { "tenuto", "0 emb 6 4 3" },
@@ -254,21 +250,21 @@ namespace autocad_part2
 
         // types of decoration per function
         // 每個函數的裝飾類型
-        public static Action<DecorationItem>[] f_near = new Action<DecorationItem>[]
+        public static Action<DecorationElement>[] f_near = new Action<DecorationElement>[]
     {
         d_near,		// 0 - near the note
 		d_slide,	// 1
 		d_arp		// 2
     };
 
-        public static Action<DecorationItem>[] f_note = new Action<DecorationItem>[]
+        public static Action<DecorationElement>[] f_note = new Action<DecorationElement>[]
     {
         null, null, null,
         d_upstaff,	// 3 - tied to note
 		d_upstaff	// 4 (below the staff)
     };
 
-        public static Action<DecorationItem>[] f_staff = new Action<DecorationItem>[]
+        public static Action<DecorationElement>[] f_staff = new Action<DecorationElement>[]
     {
         null, null, null, null, null,
         d_upstaff,	// 5 (above the staff)
@@ -278,7 +274,7 @@ namespace autocad_part2
 
         /* -- get the max/min vertical offset -- */
         /* -- 取得最大/最小垂直偏移 -- */
-        public dynamic y_get(int st, bool up, double x, double w)
+        public double y_get(int st, bool up, double x, double w)
         {
             double y;
             Staff p_staff = staff_tb[st];
@@ -394,12 +390,13 @@ namespace autocad_part2
         /* 2: special case for arpeggio */
         /* -- 繪圖函數 -- */
         /* 2: 琶音的特殊情況 */
-        public static void d_arp(object de)
+        public static void d_arp(DecorationElement de)
         {
-            int m, h, dx;
+            int m;
+            double h, dx;
             VoiceItem s = de.s;
-            dynamic dd = de.dd;
-            int xc = dd.wr;
+            DecorationDef dd = de.dd;
+            double xc = dd.wr;
 
             if (s.type == C.NOTE)
             {
@@ -441,12 +438,12 @@ namespace autocad_part2
 
         /* 0: near the note (dot, tenuto) */
         /* 0: 靠近音符 (dot, tenuto) */
-        public static void d_near(DecorationItem de)
+        public static void d_near(DecorationElement de)
         {
             int y;
             bool up = de.up;
             VoiceItem s = de.s;
-            dynamic dd = de.dd;
+            DecorationDef dd = de.dd;
 
             y = up ? s.ymx : s.ymn;
             if (y > 0 && y < 24)
@@ -504,7 +501,7 @@ namespace autocad_part2
         }
 
         /* 1: special case for slide */
-        public static void d_slide(DecorationItem de)
+        public static void d_slide(DecorationElement de)
         {
             int m, dx;
             VoiceItem s = de.s;
@@ -541,26 +538,26 @@ namespace autocad_part2
 
         // special case for long decoration
         /* 1: 幻燈片的特殊情況 */
-        public static void d_trill(object de)
+        public static void d_trill(DecorationElement de)
         {
             if (de.ldst)
                 return;
             int y, w, tmp;
-            dynamic dd = de.dd;
-            dynamic de2 = de.prev;
+            DecorationDef dd = de.dd;
+            DecorationElement de2 = de.prev;
             bool up = de.start.up;
-            dynamic s2 = de.start.s;
+            VoiceItem s2 = de.start.s;
             int st = s2.st;
             VoiceItem s = de.start.s;
-            int x = s.x;
+            double x = s.x;
 
             // shift the starting point of a long decoration
             // in the cases "T!trill(!" and "!pp!!<(!"
             // (side effect on x)
             void sh_st()
             {
-                dynamic de3;
-                dynamic de2 = de.start;         // start of the decoration
+                DecorationElement de3;
+                DecorationElement de2 = de.start;         // start of the decoration
                 VoiceItem s = de2.s;
                 int i = de2.ix;         // index of the current decoration
 
@@ -708,7 +705,7 @@ namespace autocad_part2
 
         /* 3, 4, 5, 7: above (or below) the staff */
         /* 3, 4, 5, 7: 員工上方（或下方） */
-        public static void d_upstaff(DecorationItem de)
+        public static void d_upstaff(DecorationElement de)
         {
             // don't treat here the long decorations
             if (de.ldst)            // if long deco start
@@ -718,12 +715,13 @@ namespace autocad_part2
                 d_trill(de);
                 return;
             }
-            int y, inv;
+            double y;
+            int inv;
             bool up = de.up;
             VoiceItem s = de.s;
-            dynamic dd = de.dd;
-            int x = de.x;
-            int w = dd.wl + dd.wr;
+            DecorationDef dd = de.dd;
+            double x = de.x;
+            double w = dd.wl + dd.wr;
 
             // glyphs inside the staff
             switch (dd.glyph)
@@ -829,13 +827,13 @@ namespace autocad_part2
         // 定義一個裝飾
         // nm 是裝飾的名稱
         // nmd 是表 'decos' 中定義的名稱
-        public DecorationItem deco_def(string nm, string nmd = null)
+        public DecorationDef deco_def(string nm, string nmd = null)
         {
             if (nmd == null)
                 nmd = nm;
-            DecorationItem dd =null, dd2;
-            int a, nm2, c, i, elts,hd;
-            string str,text = decos[nmd]
+            DecorationDef dd = null, dd2;
+            int a, nm2, c, i, elts, hd;
+            string str, text = decos[nmd]
             if (!string.IsNullOrEmpty(decos[nmd]))
             {
                 text = decos[nmd];
@@ -870,7 +868,7 @@ namespace autocad_part2
                             var hSplit = h.Split(',');
                             int hd = int.Parse(hSplit[1]);
                             h = hSplit[0];
-                           // dd.hd = hd;
+                            // dd.hd = hd;
                         }
                         else
                         {
@@ -882,7 +880,7 @@ namespace autocad_part2
                             return null;
                         }
 
-                        dd = new DecorationItem
+                        dd = new DecorationDef
                         {
                             name = nm,
                             func = nm.StartsWith("head-") ? 9 : c_func,
@@ -961,9 +959,9 @@ namespace autocad_part2
 
         // get/create the definition of a decoration
         // 取得/建立裝飾的定義
-        public DecorationItem get_dd(string nm)
+        public DecorationDef get_dd(string nm)
         {
-            DecorationItem dd = dd_tb[nm];
+            DecorationDef dd = dd_tb[nm];
 
             if (dd != null)
                 return dd;
@@ -1004,14 +1002,14 @@ namespace autocad_part2
         public void deco_cnv(VoiceItem s, dynamic prev = null)
         {
             VoiceItem s1;
-            DecorationItem dd;
+            DecorationDef dd;
             int i, j, nm, note, court;
             while (true)
             {
                 string nm = a_dcn[0];
                 if (string.IsNullOrEmpty(nm))
                     break;
-                DecorationItem dd = get_dd(nm);
+                DecorationDef dd = get_dd(nm);
                 if (dd == null)
                     continue;
 
@@ -1056,7 +1054,7 @@ namespace autocad_part2
                         }
                         NoteItem note = s.notes[s.nhd]; // move to the upper note of the chord
                         if (note.a_dd == null)
-                            note.a_dd = new List<DecorationItem>();
+                            note.a_dd = new List<DecorationDef>();
                         note.a_dd.Add(dd);
                         continue;
                     case 9:         // alternate head
@@ -1072,7 +1070,7 @@ namespace autocad_part2
                             note = s.notes[j];
                             note.invis = true;
                             if (note.a_dd == null)
-                                note.a_dd = new List<DecorationItem>();
+                                note.a_dd = new List<DecorationDef>();
                             note.a_dd.Add(dd);
                         }
                         continue;
@@ -1192,7 +1190,7 @@ namespace autocad_part2
 
                 // add the decoration in the symbol
                 if (s.a_dd == null)
-                    s.a_dd = new List<DecorationItem>();
+                    s.a_dd = new List<DecorationDef>();
                 s.a_dd.Add(dd);
             }
             // handle the possible courtesy accidental
@@ -1209,8 +1207,8 @@ namespace autocad_part2
         // 裝飾位於全域數組 a_dcn 中
         public void dh_cnv(VoiceItem s, object nt)
         {
-            string nm ;
-            DecorationItem dd ;
+            string nm;
+            DecorationDef dd;
 
             while (true)
             {
@@ -1218,7 +1216,7 @@ namespace autocad_part2
                 if (string.IsNullOrEmpty(nm))
                     break;
                 dd = get_dd(nm);
-                if (dd==null)
+                if (dd == null)
                     continue;
 
                 switch (dd.func)
@@ -1254,7 +1252,7 @@ namespace autocad_part2
 
                 // add the decoration in the note
                 if (nt.a_dd == null)
-                    nt.a_dd = new List<DecorationItem>();
+                    nt.a_dd = new List<DecorationDef>();
                 nt.a_dd.Add(dd);
             }
         }
@@ -1269,7 +1267,7 @@ namespace autocad_part2
 
             for (int i = 0; i < nd; i++)
             {
-                var de = a_de[i];
+                DecorationElement de = a_de[i];
                 if (de.s == s)
                     de.x += dx;
             }
@@ -1279,12 +1277,12 @@ namespace autocad_part2
         /* -- 調整符號寬度 -- */
         public double deco_width(VoiceItem s, double wlnt)
         {
-            var dd ;
+            DecorationDef dd;
             int i = 0;
             double w = 0;
             double wl = wlnt;
             double wr = s.wr;
-            List<DecorationItem> a_dd = s.a_dd;
+            List<DecorationDef> a_dd = s.a_dd;
             int nd = a_dd.Count;
 
             for (i = 0; i < nd; i++)
@@ -1336,13 +1334,13 @@ namespace autocad_part2
 
         // compute the width of decorations in chord
         // 計算和弦中裝飾的寬度
-        public int deco_wch(object nt)
+        public double deco_wch(object nt)
         {
-            var i = 0;
-            var w = 0;
-            var dd = "";
-            var wl = 0;
-            var n = nt.a_dd.Count;
+            int i = 0;
+            double w = 0;
+            DecorationDef dd ;
+            double wl = 0;
+            int n = nt.a_dd.Count;
 
             for (i = 0; i < n; i++)
             {
@@ -1365,21 +1363,18 @@ namespace autocad_part2
         {
             if (a_de.Count == 0)
                 return;
-            DecorationItem de =null;
-            DecorationItem dd = null;
-            VoiceItem s = null;
-            autocad_part2.NoteItem note = null;
+            DecorationElement de;
+            DecorationDef dd;
+            VoiceItem s;
+            NoteItem note ;
             var f = "";
             int st = 0;
-            double x = 0;
-            double y = 0;
-            double y2 = 0;
-            double ym = 0;
+            double x, y, y2, ym;
             var uf = "";
             int i = 0;
-            string str ;
+            string str;
             var a = new List<string>();
-            List<DecorationItem>  new_de = new List<DecorationItem>();
+            List<DecorationElement> new_de = new List<DecorationElement>();
             List<double> ymid = new List<double>();
 
             st = nstaff;
@@ -1547,12 +1542,12 @@ namespace autocad_part2
             var g = "";
 
             // update starting old decorations
-            void ldeco_update(string s)
+            void ldeco_update(VoiceItem s)
             {
-                var i = 0;
-                var de = "";
-                var x = s.ts_prev.x + s.ts_prev.wr;
-                var nd = a_de.Count;
+                int i = 0;
+                DecorationElement de;
+                double x = s.ts_prev.x + s.ts_prev.wr;
+                int nd = a_de.Count;
 
                 for (i = 0; i < nd; i++)
                 {
@@ -1565,14 +1560,12 @@ namespace autocad_part2
 
             /* -- create the deco elements, and treat the near ones -- */
             /* -- 建立裝飾元素，並處理附近的元素 -- */
-            void create_deco(string s)
+            void create_deco(VoiceItem s)
             {
-                var dd = "";
-                var k = 0;
-                var pos = 0;
-                var de = "";
-                var x = 0;
-                var y = 0;
+                DecorationDef dd;
+                int k, pos;
+                DecorationElement de;
+                double x,y;
                 var up = 0;
                 var nd = s.a_dd.Count;
 
@@ -1638,18 +1631,18 @@ namespace autocad_part2
                     if ((pos & 0x07) == C.SL_HIDDEN)
                         continue;
 
-                    de = new Dictionary<string, object>()
+                    de = new DecorationElement()
                 {
-                    { "s", s },
-                    { "dd", dd },
-                    { "st", s.st },
-                    { "ix", a_de.Count - 1 },
-                    { "defl", new Dictionary<string, object>() },
-                    { "x", x },
-                    { "y", y }
+                     s= s ,
+                     dd= dd ,
+                    st= s.st ,
+                    ix= a_de.Count - 1 ,
+                    defl= new Dictionary<string, object>() ,
+                    x= x ,
+                    y= y 
                 };
                     if (pos != 0)
-                        de["pos"] = pos;
+                        de.pos = pos;
 
                     up = 0; //false
                     if (dd.ty == "^")
@@ -1680,21 +1673,21 @@ namespace autocad_part2
                                 break;
                         }
                     }
-                    de["up"] = up;
+                    de.up = up;
 
                     if (dd.name.IndexOf("inverted") >= 0)
-                        de["inv"] = 1;
+                        de.inv. = 1;
                     if (s.type == C.BAR && dd.ty == null)
-                        de["x"] = s.x - s.wl / 2 - 2;
+                        de.x = s.x - s.wl / 2 - 2;
                     a_de.Add(de);
                     if (dd.dd_en)
                     {
-                        de["ldst"] = true;
+                        de.ldst = true;
                     }
                     else if (dd.dd_st)
                     {
-                        de["lden"] = true;
-                        de["defl"]["nost"] = true;
+                        de.lden = true;
+                        de.defl["nost"] = true;
                     }
 
                     if (f_near[dd.func])
@@ -1708,7 +1701,7 @@ namespace autocad_part2
             {
                 var de = "";
                 var k = 0;
-                DecorationItem dd ;
+                DecorationDef dd;
                 int nd = s.notes[m].a_dd.Count;
                 var x = s.x;
 
@@ -1732,12 +1725,12 @@ namespace autocad_part2
                     a_de.Add(de);
                     if (dd.dd_en)
                     {
-                        de["ldst"] = true;
+                        de.ldst = true;
                     }
                     else if (dd.dd_st)
                     {
-                        de["lden"] = true;
-                        de["defl"]["nost"] = true;
+                        de.lden = true;
+                        de.defl["nost"] = true;
                     }
                 }
             } // create_dh()
@@ -1764,17 +1757,13 @@ namespace autocad_part2
             // 連結長裝飾
             void ll_deco()
             {
-                var i = 0;
-                var j = 0;
-                var de = "";
-                var de2 = "";
-                var de3 = "";
-                var dd = "";
-                var dd2 = "";
+                int i, j;
+                DecorationElement de, de2, de3;
+                DecorationDef dd, dd2;
                 var v = 0;
-                var s = "";
-                var st = 0;
-                var n_de = a_de.Count;
+                VoiceItem s;
+                int st = 0;
+                int n_de = a_de.Count;
 
                 // add ending decorations
                 for (i = 0; i < n_de; i++)
@@ -1825,7 +1814,7 @@ namespace autocad_part2
                         if (de2.x < s.x + 10)
                             de2.x = s.x + 10;
                         if (de.m != null)
-                            de2["m"] = de.m;
+                            de2.m = de.m;
                         a_de.Add(de2);
                     }
                     de2.start = de;
@@ -1858,18 +1847,18 @@ namespace autocad_part2
                      || de2.start)  // start already found 開始已經找到
                         continue;
                     s = de2.s;
-                    de = new Dictionary<string, object>()
+                    de = new DecorationElement
                 {
-                    { "s", prev_scut(s) },
-                    { "st", de2.st },
-                    { "dd", de2.dd.dd_st },
-                    { "ix", a_de.Count - 1 },
-                    { "y", s.y },
-                    { "ldst", true }
+                    s= prev_scut(s) ,
+                    st= de2.st ,
+                    dd= de2.dd.dd_st ,
+                    ix= a_de.Count - 1 ,
+                    y= s.y ,
+                    ldst= true 
                 };
-                    de["x"] = de.s.x + de.s.wr;
+                    de.x = de.s.x + de.s.wr;
                     if (de2.m != null)
-                        de["m"] = de2.m;
+                        de.m = de2.m;
                     a_de.Add(de);
                     de2.start = de;
                 }
@@ -1921,12 +1910,12 @@ namespace autocad_part2
         /*（延遲輸出）*/
         public void draw_deco_note()
         {
-            var de = "";
-            var dd = "";
-            var f = "";
-            var nd = a_de.Count;
+            DecorationElement de ;
+            DecorationDef dd ;
+            int f;
+            int nd = a_de.Count;
 
-            for (var i = 0; i < nd; i++)
+            for (int i = 0; i < nd; i++)
             {
                 de = a_de[i];
                 dd = de.dd;
@@ -1951,16 +1940,15 @@ namespace autocad_part2
         /*（未縮放的延遲輸出）*/
         public void draw_deco_staff()
         {
-            var s = "";
+            VoiceItem s;
             var p_voice = "";
-            var y = 0;
-            var i = 0;
-            var v = 0;
-            var de = "";
-            var dd = "";
-            var w = 0;
-            var minmax = new List<object>();
-            var nd = a_de.Count;
+            double y = 0;
+            int i, v;
+            DecorationElement de;
+            DecorationDef dd;
+            double w = 0;
+            List<MinMaxDeco> minmax = new List<MinMaxDeco>();
+            int nd = a_de.Count;
 
             /* draw the repeat brackets */
             void draw_repbra(object p_voice)
@@ -2115,7 +2103,7 @@ namespace autocad_part2
 
             /* create the decorations tied to the staves */
             for (i = 0; i <= nstaff; i++)
-                minmax.Add(new { ymin = 0, ymax = 0 });
+                minmax.Add(new MinMaxDeco { ymin = 0, ymax = 0 });
             for (i = 0; i < nd; i++)
             {
                 de = a_de[i];
@@ -2821,676 +2809,666 @@ namespace autocad_part2
 
 
 
+        //        public static Dictionary<string, Staff> staff_tb = new Dictionary<string, Staff>();
+
+
+
+
+        //        public static int YSTEP = 48;
+        //        public static int realwidth = 1000;
+
+
+
+        //        public static void Main(string[] args)
+        //        {
+
+        //                var a_dcn = new List<string>();
+        //            var cfmt = new
+        //            {
+        //                decoerr = true
+        //            };
+        //            var glovar = new
+        //            {
+        //                ottava = false
+        //            };
+        //            var curvoice = new
+        //            {
+        //                acc = new int[38]
+        //            };
+        //            var errs = new
+        //            {
+        //                must_note_rest = "Decoration '$1' must be on a note or rest",
+        //                must_note = "Decoration '$1' must be on a note",
+        //                bad_val = "Bad value '$1'"
+        //            };
+
+        //            var s = new Symbol();
+        //            var prev = new Symbol();
+        //            var nt1 = new Note();
+        //            var nt2 = new Note();
+        //            var nm = "";
+        //            var dd = new Decoration();
+        //            var note = new Note();
+        //            var s1 = new Symbol();
+        //            var court = false;
+
+        //            while (true)
+        //            {
+        //                nm = a_dcn[0];
+        //                if (string.IsNullOrEmpty(nm))
+        //                {
+        //                    break;
+        //                }
+        //                a_dcn.RemoveAt(0);
+        //                dd = get_dd(nm);
+        //                if (dd == null)
+        //                {
+        //                    continue;
+        //                }
+
+        //                switch (dd.func)
+        //                {
+        //                    case 0:
+        //                        if (s.type == C.BAR && nm == "dot")
+        //                        {
+        //                            s.bar_dotted = true;
+        //                            continue;
+        //                        }
+        //                        goto case 1;
+        //                    case 1:
+        //                    case 2:
+        //                        if (s.notes == null)
+        //                        {
+        //                            Console.WriteLine("Error: Decoration '{0}' must be on a note or rest", nm);
+        //                            continue;
+        //                        }
+        //                        break;
+        //                    case 4:
+        //                    case 5:
+        //                        var i = nm.Match(/ 1?[85]([vm])([ab])([()]) /);
+        //                        if (i != null)
+        //                        {
+        //                            var j = i[1] == 'v' ? 1 : 2;
+        //                            if (i[2] == 'b')
+        //                            {
+        //                                j = -j;
+        //                            }
+        //                            if (s.ottava == null)
+        //                            {
+        //                                s.ottava = new List<int>();
+        //                            }
+        //                            s.ottava[i[3] == '(' ? 0 : 1] = j;
+        //                            glovar.ottava = true;
+        //                        }
+        //                        break;
+        //                    case 8:
+        //                        if (s.type != C.NOTE)
+        //                        {
+        //                            Console.WriteLine("Error: Decoration '{0}' must be on a note", nm);
+        //                            continue;
+        //                        }
+        //                        note = s.notes[s.nhd];
+        //                        if (note.a_dd == null)
+        //                        {
+        //                            note.a_dd = new List<Decoration>();
+        //                        }
+        //                        note.a_dd.Add(dd);
+        //                        continue;
+        //                    case 9:
+        //                        if (s.notes == null)
+        //                        {
+        //                            Console.WriteLine("Error: Decoration '{0}' must be on a note or rest", nm);
+        //                            continue;
+        //                        }
+        //                        for (var j = 0; j <= s.nhd; j++)
+        //                        {
+        //                            note = s.notes[j];
+        //                            note.invis = true;
+        //                            if (note.a_dd == null)
+        //                            {
+        //                                note.a_dd = new List<Decoration>();
+        //                            }
+        //                            note.a_dd.Add(dd);
+        //                        }
+        //                        continue;
+        //                    case 10:
+        //                        if (s.notes != null)
+        //                        {
+        //                            for (var j = 0; j <= s.nhd; j++)
+        //                            {
+        //                                s.notes[j].color = nm;
+        //                            }
+        //                        }
+        //                        else
+        //                        {
+        //                            s.color = nm;
+        //                        }
+        //                        break;
+        //                    case 32:
+        //                        s.invis = true;
+        //                        break;
+        //                    case 33:
+        //                        if (s.type != C.BAR)
+        //                        {
+        //                            Console.WriteLine("Error: !beamon! must be on a bar");
+        //                            continue;
+        //                        }
+        //                        s.beam_on = true;
+        //                        break;
+        //                    case 34:
+        //                        if (s.type != C.NOTE || prev == null || prev.type != C.NOTE || s.dur != prev.dur)
+        //                        {
+        //                            Console.WriteLine("Error: !{0}! must be on the last of a couple of notes", nm);
+        //                            continue;
+        //                        }
+        //                        s.trem2 = true;
+        //                        s.beam_end = true;
+        //                        s.beam_st = false;
+        //                        prev.beam_st = true;
+        //                        prev.beam_end = false;
+        //                        s.ntrem = prev.ntrem = int.Parse(nm[4].ToString());
+        //                        for (var j = 0; j <= s.nhd; j++)
+        //                        {
+        //                            s.notes[j].dur *= 2;
+        //                        }
+        //                        for (var j = 0; j <= prev.nhd; j++)
+        //                        {
+        //                            prev.notes[j].dur *= 2;
+        //                        }
+        //                        break;
+        //                    case 35:
+        //                        if (s.type != C.NOTE)
+        //                        {
+        //                            Console.WriteLine("Error: Decoration '{0}' must be on a note", nm);
+        //                            continue;
+        //                        }
+        //                        s.xstem = true;
+        //                        break;
+        //                    case 36:
+        //                        if (s.type != C.NOTE)
+        //                        {
+        //                            Console.WriteLine("Error: Decoration '{0}' must be on a note", nm);
+        //                            continue;
+        //                        }
+        //                        if (nm[6] == '1')
+        //                        {
+        //                            s.beam_br1 = true;
+        //                        }
+        //                        else
+        //                        {
+        //                            s.beam_br2 = true;
+        //                        }
+        //                        break;
+        //                    case 37:
+        //                        s.rbstop = 1;
+        //                        break;
+        //                    case 38:
+        //                        if (s.type != C.NOTE)
+        //                        {
+        //                            Console.WriteLine("Error: Decoration '{0}' must be on a note", nm);
+        //                            continue;
+        //                        }
+        //                        s.trem1 = true;
+        //                        s.ntrem = nm.Length;
+        //                        break;
+        //                    case 39:
+        //                        if (s.type != C.NOTE)
+        //                        {
+        //                            Console.WriteLine("Error: Decoration '{0}' must be on a note", nm);
+        //                            continue;
+        //                        }
+        //                        s.feathered_beam = nm[5] == 'a' ? 1 : -1;
+        //                        break;
+        //                    case 40:
+        //                        s.stemless = true;
+        //                        break;
+        //                    case 41:
+        //                        s.rbstop = 2;
+        //                        break;
+        //                    case 42:
+        //                        if (!s.notes[0].acc)
+        //                        {
+        //                            continue;
+        //                        }
+        //                        nm = "sacc" + s.notes[0].acc.ToString();
+        //                        dd = dd_tb[nm];
+        //                        if (dd == null)
+        //                        {
+        //                            dd = deco_def(nm);
+        //                            if (dd == null)
+        //                            {
+        //                                Console.WriteLine("Error: Bad value '!editorial!'");
+        //                                continue;
+        //                            }
+        //                        }
+        //                        s.notes[0].acc = null;
+        //                        curvoice.acc[s.notes[0].pit + 19] = 0;
+        //                        break;
+        //                    case 43:
+        //                        j = curvoice.acc[s.notes[0].pit + 19];
+        //                        if (s.notes[0].acc || j == 0)
+        //                        {
+        //                            continue;
+        //                        }
+        //                        court = true;
+        //                        break;
+        //                    case 44:
+        //                        do_ctie(nm, s, s.notes[0]);
+        //                        continue;
+        //                }
+
+        //                if (s.a_dd == null)
+        //                {
+        //                    s.a_dd = new List<Decoration>();
+        //                }
+        //                s.a_dd.Add(dd);
+        //            }
+
+        //            if (court)
+        //            {
+        //                a_dcn.Add("cacc" + j);
+        //                dh_cnv(s, s.notes[0]);
+        //            }
+        //        }
+
+
+        //    /*********************************************/
+
+
+        //            static Dictionary<string, dynamic> dd_tb = new Dictionary<string, dynamic>(); // definition of the decorations
+        //        static dynamic a_de;                    // array of the decoration elements
+        //        static dynamic cross;                   // cross voice decorations
+
+        //        static Dictionary<string, string> decos = new Dictionary<string, string>()
+        //        {
+        //            { "dot", "0 stc 6 1.5 1" },
+        //            { "tenuto", "0 emb 6 4 3" },
+        //            { "slide", "1 sld 3 7 1" }
+        //        };
+
+        //            static dynamic[] f_near = new dynamic[]
+        //            {
+        //            d_near,     // 0 - near the note
+        //            d_slide,    // 1
+        //            d_arp       // 2
+        //            };
+
+        //            static dynamic[] f_note = new dynamic[]
+        //            {
+        //            null, null, null,
+        //            d_upstaff,  // 3 - tied to note
+        //            d_upstaff   // 4 (below the staff)
+        //            };
+
+        //            static dynamic[] f_staff = new dynamic[]
+        //            {
+        //            null, null, null, null, null,
+        //            d_upstaff,  // 5 (above the staff)
+        //            d_upstaff,  // 6 - tied to staff (dynamic marks)
+        //            d_upstaff   // 7 (below the staff)
+        //            };
+
+
+
+        ///*******************************************************/
+
+        //        public  Dictionary<string, string> dd_tb = new Dictionary<string, string>();
+        //        public  Action<object> a_de;
+        //        public  Action<object> cross;
+
+        //        public  Dictionary<string, string> decos = new Dictionary<string, string>()
+        //    {
+        //        {"dot", "0 stc 6 1.5 1"},
+        //        {"tenuto", "0 emb 6 4 3"}
+        //    };
+
+        //        public  List<Action<object>> f_near = new List<Action<object>>()
+        //    {
+        //        d_test1, d_test2, d_test3
+        //    };
+
+        //        public  List<Action<object>> f_note = new List<Action<object>>()
+        //    {
+        //        null, null, null,
+        //        d_test4,
+        //        d_test4
+        //    };
+
+        //        public  List<Action<object>> f_staff = new List<Action<object>>()
+        //    {
+        //        null, null, null, null, null,
+        //        d_test4,
+        //        d_test4,
+        //        d_test4
+        //    };
+
+        //        public  void d_test1(object de)
+        //        {
+        //            var d = (dynamic)de;
+        //            if (d.start) { d_trill(d); return; }
+        //        }
+
+        //        public  void d_test2(object de)
+        //        {
+        //            var d = (dynamic)de;
+        //            if (d.start) { d_trill(d); return; }
+        //        }
+
+        //        public  void d_test3(object de)
+        //        {
+        //            var d = (dynamic)de;
+        //            if (d.start) { d_trill(d); return; }
+        //        }
+
+        //        public  void d_test4(object de)
+        //        {
+        //            var d = (dynamic)de;
+        //            if (d.start) { d_trill(d); return; }
+        //        }
+
+
+
+
+        //        static Dictionary<string, string> dd_tb = new Dictionary<string, string>();
+        //        static Action<object> a_de;
+        //        static Action<object> cross;
+
+        //        static Dictionary<string, string> decos = new Dictionary<string, string>
+        //    {
+        //        { "dot", "0 stc 6 1.5 1" },
+        //        { "tenuto", "0 emb 6 4 3" }
+        //    };
+
+        //        static List<Action<object>> f_near = new List<Action<object>> { d_test1, d_test2, d_test3 };
+        //        static List<Action<object>> f_note = new List<Action<object>> { null, null, null, d_test4, d_test4 };
+        //        static List<Action<object>> f_staff = new List<Action<object>> { null, null, null, null, null, d_test4, d_test4, d_test4 };
+
+        //        static void d_test1(object de)
+        //        {
+        //            dynamic deDynamic = de;
+        //            if (deDynamic.start) { d_trill(de); return; }
+        //        }
+
+        //        static void d_test2(object de)
+        //        {
+        //            dynamic deDynamic = de;
+        //            if (deDynamic.start) { d_trill(de); return; }
+        //        }
+
+        //        static void d_test3(object de)
+        //        {
+        //            dynamic deDynamic = de;
+        //            if (deDynamic.start) { d_trill(de); return; }
+        //        }
+
+        //        static void d_test4(object de)
+        //        {
+        //            dynamic deDynamic = de;
+        //            if (deDynamic.start) { d_trill(de); return; }
+        //        }
+
+        //        static void d_trill(object de)
+        //        {
+        //            // Implementation of d_trill
+        //        }
+
+        //        static void draw_measnb()
+        //        {
+        //            dynamic cur_sy = null; // Placeholder for cur_sy
+        //            dynamic tsfirst = null; // Placeholder for tsfirst
+        //            dynamic gene = new { nbar = 0, curfont = new { size = 0, pad = 0 } }; // Placeholder for gene
+        //            dynamic cfmt = new { measurenb = 0 }; // Placeholder for cfmt
+        //            dynamic staff_tb = new List<dynamic>(); // Placeholder for staff_tb
+        //            int nstaff = 0; // Placeholder for nstaff
+
+        //            VoiceItem s, st, bar_num, x, y, w, any_nb, font_size, w0;
+        //            dynamic sy = cur_sy;
+
+        //            // search the top staff
+        //            for (st = 0; st <= nstaff; st++)
+        //            {
+        //                if (sy.st_print[st])
+        //                    break;
+        //            }
+        //            if (st > nstaff)
+        //                return; // no visible staff
+        //            set_dscale(st);
+
+        //            // leave the measure numbers as unscaled
+        //            if (staff_tb[st].staffscale != 1)
+        //            {
+        //                font_size = get_font("measure").size;
+        //                param_set_font("measurefont", "* " + (font_size / staff_tb[st].staffscale).ToString());
+        //            }
+        //            set_font("measure");
+        //            w0 = cwidf('0'); // (greatest) width of a number
+
+        //            s = tsfirst; // clef
+        //            bar_num = gene.nbar;
+        //            if (bar_num > 1)
+        //            {
+        //                if (cfmt.measurenb == 0)
+        //                {
+        //                    any_nb = true;
+        //                    y = y_get(st, true, 0, 20);
+        //                    if (y < staff_tb[st].topbar + 14)
+        //                        y = staff_tb[st].topbar + 14;
+        //                    xy_str(0, y - gene.curfont.size * .2, bar_num.ToString());
+        //                    y_set(st, true, 0, 20, y + gene.curfont.size + 2);
+        //                }
+        //                else if (bar_num % cfmt.measurenb == 0)
+        //                {
+        //                    for (; ; s = s.ts_next)
+        //                    {
+        //                        switch (s.type)
+        //                        {
+        //                            case C.CLEF:
+        //                            case C.KEY:
+        //                            case C.METER:
+        //                            case C.STBRK:
+        //                                continue;
+        //                        }
+        //                        break;
+        //                    }
+
+        //                    // don't display the number twice
+        //                    if (s.type != C.BAR || !s.bar_num)
+        //                    {
+        //                        any_nb = true;
+        //                        w = w0;
+        //                        if (bar_num >= 10)
+        //                            w *= bar_num >= 100 ? 3 : 2;
+        //                        if (gene.curfont.pad)
+        //                            w += gene.curfont.pad * 2;
+        //                        x = (s.prev != null
+        //                            ? s.prev.x + s.prev.wr / 2
+        //                            : s.x - s.wl) - w;
+        //                        y = y_get(st, true, x, w) + 5;
+        //                        if (y < staff_tb[st].topbar + 6)
+        //                            y = staff_tb[st].topbar + 6;
+        //                        y += gene.curfont.pad;
+        //                        xy_str(x, y - gene.curfont.size * .2, bar_num.ToString());
+        //                        y += gene.curfont.size + gene.curfont.pad;
+        //                        y_set(st, true, x, w, y);
+        //                    }
+        //                }
+        //            }
+
+        //            for (; s != null; s = s.ts_next)
+        //            {
+        //                switch (s.type)
+        //                {
+        //                    case C.STAVES:
+        //                        sy = s.sy;
+        //                        for (st = 0; st < nstaff; st++)
+        //                        {
+        //                            if (sy.st_print[st])
+        //                                break;
+        //                        }
+        //                        set_dscale(st);
+        //                        continue;
+        //                    default:
+        //                        continue;
+        //                    case C.BAR:
+        //                        if (!s.bar_num || s.bar_num <= 1)
+        //                            continue;
+        //                        break;
+        //                }
+
+        //                bar_num = s.bar_num;
+        //                if (cfmt.measurenb == 0
+        //                 || (bar_num % cfmt.measurenb) != 0
+        //                 || s.next == null
+        //                 || s.bar_mrep)
+        //                    continue;
+        //                if (!any_nb)
+        //                    any_nb = true;
+        //                w = w0;
+        //                if (bar_num >= 10)
+        //                    w *= bar_num >= 100 ? 3 : 2;
+        //                if (gene.curfont.pad)
+        //                    w += gene.curfont.pad * 2;
+        //                x = s.x;
+        //                y = y_get(st, true, x, w);
+        //                if (y < staff_tb[st].topbar + 6)
+        //                    y = staff_tb[st].topbar + 6;
+        //                if (s.next.type == C.NOTE)
+        //                {
+        //                    if (s.next.stem > 0)
+        //                    {
+        //                        if (y < s.next.ys - gene.curfont.size)
+        //                            y = s.next.ys - gene.curfont.size;
+        //                    }
+        //                    else
+        //                    {
+        //                        if (y < s.next.y)
+        //                            y = s.next.y;
+        //                    }
+        //                }
+        //                y += 2 + gene.curfont.pad;
+        //                xy_str(x, y - gene.curfont.size * .2, bar_num.ToString());
+        //                y += gene.curfont.size + gene.curfont.pad;
+        //                y_set(st, true, x, w, y);
+        //            }
+        //            gene.nbar = bar_num;
+
+        //            if (font_size != null)
+        //                param_set_font("measurefont", "* " + font_size.ToString());
+        //        }
+
+        //        static void set_dscale(dynamic st)
+        //        {
+        //            // Implementation of set_dscale
+        //        }
+
+        //        static dynamic get_font(string fontName)
+        //        {
+        //            // Implementation of get_font
+        //            return new { size = 0 };
+        //        }
+
+        //        static void param_set_font(string fontName, string value)
+        //        {
+        //            // Implementation of param_set_font
+        //        }
+
+        //        static void set_font(string fontName)
+        //        {
+        //            // Implementation of set_font
+        //        }
+
+        //        static int cwidf(char c)
+        //        {
+        //            // Implementation of cwidf
+        //            return 0;
+        //        }
+
+        //        static int y_get(dynamic st, bool flag, int x, int w)
+        //        {
+        //            // Implementation of y_get
+        //            return 0;
+        //        }
+
+        //        static void xy_str(int x, int y, string str)
+        //        {
+        //            // Implementation of xy_str
+        //        }
+
+        //        static void y_set(dynamic st, bool flag, int x, int w, int y)
+        //        {
+        //            // Implementation of y_set
+        //        }
+
+
+
+        //    static class C
+        //    {
+        //        public const int CLEF = 1;
+        //        public const int KEY = 2;
+        //        public const int METER = 3;
+        //        public const int STBRK = 4;
+        //        public const int BAR = 5;
+        //        public const int NOTE = 6;
+        //        public const int STAVES = 7;
+        //    }
+
+
+        ///***********************************************/
+
+        //        static Dictionary<string, string> dd_tb = new Dictionary<string, string>();
+        //        static Action<object> a_de;
+        //        static object cross;
+
+        //        static Dictionary<string, string> decos = new Dictionary<string, string>()
+        //    {
+        //        { "dot", "0 stc 6 1.5 1" },
+        //        { "tenuto", "0 emb 6 4 3" }
+        //    };
+
+        //        static List<Action<object>> f_near = new List<Action<object>>()
+        //    {
+        //        d_test1, d_test2, d_test3
+        //    };
+
+        //        static List<Action<object>> f_note = new List<Action<object>>()
+        //    {
+        //        null, null, null,
+        //        d_test4,
+        //        d_test4
+        //    };
+
+        //        static List<Action<object>> f_staff = new List<Action<object>>()
+        //    {
+        //        null, null, null, null, null,
+        //        d_test4,
+        //        d_test4,
+        //        d_test4
+        //    };
+
+        //        static void d_test1(object de)
+        //        {
+        //            if (de.start) { d_trill(de); return; }
+        //        }
+
+        //        static void d_test2(object de)
+        //        {
+        //            if (de.start) { d_trill(de); return; }
+        //        }
+
+        //        static void d_test3(object de)
+        //        {
+        //            if (de.start) { d_trill(de); return; }
+        //        }
+
+        //        static void d_test4(object de)
+        //        {
+        //            if (de.start) { d_trill(de); return; }
+        //        }
 
 
-
-
-
-
-
-
-
-
-//        public static Dictionary<string, Staff> staff_tb = new Dictionary<string, Staff>();
-
-
-
-
-//        public static int YSTEP = 48;
-//        public static int realwidth = 1000;
-
-    
-
-//        public static void Main(string[] args)
-//        {
-
-//                var a_dcn = new List<string>();
-//            var cfmt = new
-//            {
-//                decoerr = true
-//            };
-//            var glovar = new
-//            {
-//                ottava = false
-//            };
-//            var curvoice = new
-//            {
-//                acc = new int[38]
-//            };
-//            var errs = new
-//            {
-//                must_note_rest = "Decoration '$1' must be on a note or rest",
-//                must_note = "Decoration '$1' must be on a note",
-//                bad_val = "Bad value '$1'"
-//            };
-
-//            var s = new Symbol();
-//            var prev = new Symbol();
-//            var nt1 = new Note();
-//            var nt2 = new Note();
-//            var nm = "";
-//            var dd = new Decoration();
-//            var note = new Note();
-//            var s1 = new Symbol();
-//            var court = false;
-
-//            while (true)
-//            {
-//                nm = a_dcn[0];
-//                if (string.IsNullOrEmpty(nm))
-//                {
-//                    break;
-//                }
-//                a_dcn.RemoveAt(0);
-//                dd = get_dd(nm);
-//                if (dd == null)
-//                {
-//                    continue;
-//                }
-
-//                switch (dd.func)
-//                {
-//                    case 0:
-//                        if (s.type == C.BAR && nm == "dot")
-//                        {
-//                            s.bar_dotted = true;
-//                            continue;
-//                        }
-//                        goto case 1;
-//                    case 1:
-//                    case 2:
-//                        if (s.notes == null)
-//                        {
-//                            Console.WriteLine("Error: Decoration '{0}' must be on a note or rest", nm);
-//                            continue;
-//                        }
-//                        break;
-//                    case 4:
-//                    case 5:
-//                        var i = nm.Match(/ 1?[85]([vm])([ab])([()]) /);
-//                        if (i != null)
-//                        {
-//                            var j = i[1] == 'v' ? 1 : 2;
-//                            if (i[2] == 'b')
-//                            {
-//                                j = -j;
-//                            }
-//                            if (s.ottava == null)
-//                            {
-//                                s.ottava = new List<int>();
-//                            }
-//                            s.ottava[i[3] == '(' ? 0 : 1] = j;
-//                            glovar.ottava = true;
-//                        }
-//                        break;
-//                    case 8:
-//                        if (s.type != C.NOTE)
-//                        {
-//                            Console.WriteLine("Error: Decoration '{0}' must be on a note", nm);
-//                            continue;
-//                        }
-//                        note = s.notes[s.nhd];
-//                        if (note.a_dd == null)
-//                        {
-//                            note.a_dd = new List<Decoration>();
-//                        }
-//                        note.a_dd.Add(dd);
-//                        continue;
-//                    case 9:
-//                        if (s.notes == null)
-//                        {
-//                            Console.WriteLine("Error: Decoration '{0}' must be on a note or rest", nm);
-//                            continue;
-//                        }
-//                        for (var j = 0; j <= s.nhd; j++)
-//                        {
-//                            note = s.notes[j];
-//                            note.invis = true;
-//                            if (note.a_dd == null)
-//                            {
-//                                note.a_dd = new List<Decoration>();
-//                            }
-//                            note.a_dd.Add(dd);
-//                        }
-//                        continue;
-//                    case 10:
-//                        if (s.notes != null)
-//                        {
-//                            for (var j = 0; j <= s.nhd; j++)
-//                            {
-//                                s.notes[j].color = nm;
-//                            }
-//                        }
-//                        else
-//                        {
-//                            s.color = nm;
-//                        }
-//                        break;
-//                    case 32:
-//                        s.invis = true;
-//                        break;
-//                    case 33:
-//                        if (s.type != C.BAR)
-//                        {
-//                            Console.WriteLine("Error: !beamon! must be on a bar");
-//                            continue;
-//                        }
-//                        s.beam_on = true;
-//                        break;
-//                    case 34:
-//                        if (s.type != C.NOTE || prev == null || prev.type != C.NOTE || s.dur != prev.dur)
-//                        {
-//                            Console.WriteLine("Error: !{0}! must be on the last of a couple of notes", nm);
-//                            continue;
-//                        }
-//                        s.trem2 = true;
-//                        s.beam_end = true;
-//                        s.beam_st = false;
-//                        prev.beam_st = true;
-//                        prev.beam_end = false;
-//                        s.ntrem = prev.ntrem = int.Parse(nm[4].ToString());
-//                        for (var j = 0; j <= s.nhd; j++)
-//                        {
-//                            s.notes[j].dur *= 2;
-//                        }
-//                        for (var j = 0; j <= prev.nhd; j++)
-//                        {
-//                            prev.notes[j].dur *= 2;
-//                        }
-//                        break;
-//                    case 35:
-//                        if (s.type != C.NOTE)
-//                        {
-//                            Console.WriteLine("Error: Decoration '{0}' must be on a note", nm);
-//                            continue;
-//                        }
-//                        s.xstem = true;
-//                        break;
-//                    case 36:
-//                        if (s.type != C.NOTE)
-//                        {
-//                            Console.WriteLine("Error: Decoration '{0}' must be on a note", nm);
-//                            continue;
-//                        }
-//                        if (nm[6] == '1')
-//                        {
-//                            s.beam_br1 = true;
-//                        }
-//                        else
-//                        {
-//                            s.beam_br2 = true;
-//                        }
-//                        break;
-//                    case 37:
-//                        s.rbstop = 1;
-//                        break;
-//                    case 38:
-//                        if (s.type != C.NOTE)
-//                        {
-//                            Console.WriteLine("Error: Decoration '{0}' must be on a note", nm);
-//                            continue;
-//                        }
-//                        s.trem1 = true;
-//                        s.ntrem = nm.Length;
-//                        break;
-//                    case 39:
-//                        if (s.type != C.NOTE)
-//                        {
-//                            Console.WriteLine("Error: Decoration '{0}' must be on a note", nm);
-//                            continue;
-//                        }
-//                        s.feathered_beam = nm[5] == 'a' ? 1 : -1;
-//                        break;
-//                    case 40:
-//                        s.stemless = true;
-//                        break;
-//                    case 41:
-//                        s.rbstop = 2;
-//                        break;
-//                    case 42:
-//                        if (!s.notes[0].acc)
-//                        {
-//                            continue;
-//                        }
-//                        nm = "sacc" + s.notes[0].acc.ToString();
-//                        dd = dd_tb[nm];
-//                        if (dd == null)
-//                        {
-//                            dd = deco_def(nm);
-//                            if (dd == null)
-//                            {
-//                                Console.WriteLine("Error: Bad value '!editorial!'");
-//                                continue;
-//                            }
-//                        }
-//                        s.notes[0].acc = null;
-//                        curvoice.acc[s.notes[0].pit + 19] = 0;
-//                        break;
-//                    case 43:
-//                        j = curvoice.acc[s.notes[0].pit + 19];
-//                        if (s.notes[0].acc || j == 0)
-//                        {
-//                            continue;
-//                        }
-//                        court = true;
-//                        break;
-//                    case 44:
-//                        do_ctie(nm, s, s.notes[0]);
-//                        continue;
-//                }
-
-//                if (s.a_dd == null)
-//                {
-//                    s.a_dd = new List<Decoration>();
-//                }
-//                s.a_dd.Add(dd);
-//            }
-
-//            if (court)
-//            {
-//                a_dcn.Add("cacc" + j);
-//                dh_cnv(s, s.notes[0]);
-//            }
-//        }
-    
-
-//    /*********************************************/
-  
-    
-//            static Dictionary<string, dynamic> dd_tb = new Dictionary<string, dynamic>(); // definition of the decorations
-//        static dynamic a_de;                    // array of the decoration elements
-//        static dynamic cross;                   // cross voice decorations
-
-//        static Dictionary<string, string> decos = new Dictionary<string, string>()
-//        {
-//            { "dot", "0 stc 6 1.5 1" },
-//            { "tenuto", "0 emb 6 4 3" },
-//            { "slide", "1 sld 3 7 1" }
-//        };
-
-//            static dynamic[] f_near = new dynamic[]
-//            {
-//            d_near,     // 0 - near the note
-//            d_slide,    // 1
-//            d_arp       // 2
-//            };
-
-//            static dynamic[] f_note = new dynamic[]
-//            {
-//            null, null, null,
-//            d_upstaff,  // 3 - tied to note
-//            d_upstaff   // 4 (below the staff)
-//            };
-
-//            static dynamic[] f_staff = new dynamic[]
-//            {
-//            null, null, null, null, null,
-//            d_upstaff,  // 5 (above the staff)
-//            d_upstaff,  // 6 - tied to staff (dynamic marks)
-//            d_upstaff   // 7 (below the staff)
-//            };
-
-
- 
-///*******************************************************/
-
-//        public  Dictionary<string, string> dd_tb = new Dictionary<string, string>();
-//        public  Action<object> a_de;
-//        public  Action<object> cross;
-
-//        public  Dictionary<string, string> decos = new Dictionary<string, string>()
-//    {
-//        {"dot", "0 stc 6 1.5 1"},
-//        {"tenuto", "0 emb 6 4 3"}
-//    };
-
-//        public  List<Action<object>> f_near = new List<Action<object>>()
-//    {
-//        d_test1, d_test2, d_test3
-//    };
-
-//        public  List<Action<object>> f_note = new List<Action<object>>()
-//    {
-//        null, null, null,
-//        d_test4,
-//        d_test4
-//    };
-
-//        public  List<Action<object>> f_staff = new List<Action<object>>()
-//    {
-//        null, null, null, null, null,
-//        d_test4,
-//        d_test4,
-//        d_test4
-//    };
-
-//        public  void d_test1(object de)
-//        {
-//            var d = (dynamic)de;
-//            if (d.start) { d_trill(d); return; }
-//        }
-
-//        public  void d_test2(object de)
-//        {
-//            var d = (dynamic)de;
-//            if (d.start) { d_trill(d); return; }
-//        }
-
-//        public  void d_test3(object de)
-//        {
-//            var d = (dynamic)de;
-//            if (d.start) { d_trill(d); return; }
-//        }
-
-//        public  void d_test4(object de)
-//        {
-//            var d = (dynamic)de;
-//            if (d.start) { d_trill(d); return; }
-//        }
-
-
-
-
-//        static Dictionary<string, string> dd_tb = new Dictionary<string, string>();
-//        static Action<object> a_de;
-//        static Action<object> cross;
-
-//        static Dictionary<string, string> decos = new Dictionary<string, string>
-//    {
-//        { "dot", "0 stc 6 1.5 1" },
-//        { "tenuto", "0 emb 6 4 3" }
-//    };
-
-//        static List<Action<object>> f_near = new List<Action<object>> { d_test1, d_test2, d_test3 };
-//        static List<Action<object>> f_note = new List<Action<object>> { null, null, null, d_test4, d_test4 };
-//        static List<Action<object>> f_staff = new List<Action<object>> { null, null, null, null, null, d_test4, d_test4, d_test4 };
-
-//        static void d_test1(object de)
-//        {
-//            dynamic deDynamic = de;
-//            if (deDynamic.start) { d_trill(de); return; }
-//        }
-
-//        static void d_test2(object de)
-//        {
-//            dynamic deDynamic = de;
-//            if (deDynamic.start) { d_trill(de); return; }
-//        }
-
-//        static void d_test3(object de)
-//        {
-//            dynamic deDynamic = de;
-//            if (deDynamic.start) { d_trill(de); return; }
-//        }
-
-//        static void d_test4(object de)
-//        {
-//            dynamic deDynamic = de;
-//            if (deDynamic.start) { d_trill(de); return; }
-//        }
-
-//        static void d_trill(object de)
-//        {
-//            // Implementation of d_trill
-//        }
-
-//        static void draw_measnb()
-//        {
-//            dynamic cur_sy = null; // Placeholder for cur_sy
-//            dynamic tsfirst = null; // Placeholder for tsfirst
-//            dynamic gene = new { nbar = 0, curfont = new { size = 0, pad = 0 } }; // Placeholder for gene
-//            dynamic cfmt = new { measurenb = 0 }; // Placeholder for cfmt
-//            dynamic staff_tb = new List<dynamic>(); // Placeholder for staff_tb
-//            int nstaff = 0; // Placeholder for nstaff
-
-//            VoiceItem s, st, bar_num, x, y, w, any_nb, font_size, w0;
-//            dynamic sy = cur_sy;
-
-//            // search the top staff
-//            for (st = 0; st <= nstaff; st++)
-//            {
-//                if (sy.st_print[st])
-//                    break;
-//            }
-//            if (st > nstaff)
-//                return; // no visible staff
-//            set_dscale(st);
-
-//            // leave the measure numbers as unscaled
-//            if (staff_tb[st].staffscale != 1)
-//            {
-//                font_size = get_font("measure").size;
-//                param_set_font("measurefont", "* " + (font_size / staff_tb[st].staffscale).ToString());
-//            }
-//            set_font("measure");
-//            w0 = cwidf('0'); // (greatest) width of a number
-
-//            s = tsfirst; // clef
-//            bar_num = gene.nbar;
-//            if (bar_num > 1)
-//            {
-//                if (cfmt.measurenb == 0)
-//                {
-//                    any_nb = true;
-//                    y = y_get(st, true, 0, 20);
-//                    if (y < staff_tb[st].topbar + 14)
-//                        y = staff_tb[st].topbar + 14;
-//                    xy_str(0, y - gene.curfont.size * .2, bar_num.ToString());
-//                    y_set(st, true, 0, 20, y + gene.curfont.size + 2);
-//                }
-//                else if (bar_num % cfmt.measurenb == 0)
-//                {
-//                    for (; ; s = s.ts_next)
-//                    {
-//                        switch (s.type)
-//                        {
-//                            case C.CLEF:
-//                            case C.KEY:
-//                            case C.METER:
-//                            case C.STBRK:
-//                                continue;
-//                        }
-//                        break;
-//                    }
-
-//                    // don't display the number twice
-//                    if (s.type != C.BAR || !s.bar_num)
-//                    {
-//                        any_nb = true;
-//                        w = w0;
-//                        if (bar_num >= 10)
-//                            w *= bar_num >= 100 ? 3 : 2;
-//                        if (gene.curfont.pad)
-//                            w += gene.curfont.pad * 2;
-//                        x = (s.prev != null
-//                            ? s.prev.x + s.prev.wr / 2
-//                            : s.x - s.wl) - w;
-//                        y = y_get(st, true, x, w) + 5;
-//                        if (y < staff_tb[st].topbar + 6)
-//                            y = staff_tb[st].topbar + 6;
-//                        y += gene.curfont.pad;
-//                        xy_str(x, y - gene.curfont.size * .2, bar_num.ToString());
-//                        y += gene.curfont.size + gene.curfont.pad;
-//                        y_set(st, true, x, w, y);
-//                    }
-//                }
-//            }
-
-//            for (; s != null; s = s.ts_next)
-//            {
-//                switch (s.type)
-//                {
-//                    case C.STAVES:
-//                        sy = s.sy;
-//                        for (st = 0; st < nstaff; st++)
-//                        {
-//                            if (sy.st_print[st])
-//                                break;
-//                        }
-//                        set_dscale(st);
-//                        continue;
-//                    default:
-//                        continue;
-//                    case C.BAR:
-//                        if (!s.bar_num || s.bar_num <= 1)
-//                            continue;
-//                        break;
-//                }
-
-//                bar_num = s.bar_num;
-//                if (cfmt.measurenb == 0
-//                 || (bar_num % cfmt.measurenb) != 0
-//                 || s.next == null
-//                 || s.bar_mrep)
-//                    continue;
-//                if (!any_nb)
-//                    any_nb = true;
-//                w = w0;
-//                if (bar_num >= 10)
-//                    w *= bar_num >= 100 ? 3 : 2;
-//                if (gene.curfont.pad)
-//                    w += gene.curfont.pad * 2;
-//                x = s.x;
-//                y = y_get(st, true, x, w);
-//                if (y < staff_tb[st].topbar + 6)
-//                    y = staff_tb[st].topbar + 6;
-//                if (s.next.type == C.NOTE)
-//                {
-//                    if (s.next.stem > 0)
-//                    {
-//                        if (y < s.next.ys - gene.curfont.size)
-//                            y = s.next.ys - gene.curfont.size;
-//                    }
-//                    else
-//                    {
-//                        if (y < s.next.y)
-//                            y = s.next.y;
-//                    }
-//                }
-//                y += 2 + gene.curfont.pad;
-//                xy_str(x, y - gene.curfont.size * .2, bar_num.ToString());
-//                y += gene.curfont.size + gene.curfont.pad;
-//                y_set(st, true, x, w, y);
-//            }
-//            gene.nbar = bar_num;
-
-//            if (font_size != null)
-//                param_set_font("measurefont", "* " + font_size.ToString());
-//        }
-
-//        static void set_dscale(dynamic st)
-//        {
-//            // Implementation of set_dscale
-//        }
-
-//        static dynamic get_font(string fontName)
-//        {
-//            // Implementation of get_font
-//            return new { size = 0 };
-//        }
-
-//        static void param_set_font(string fontName, string value)
-//        {
-//            // Implementation of param_set_font
-//        }
-
-//        static void set_font(string fontName)
-//        {
-//            // Implementation of set_font
-//        }
-
-//        static int cwidf(char c)
-//        {
-//            // Implementation of cwidf
-//            return 0;
-//        }
-
-//        static int y_get(dynamic st, bool flag, int x, int w)
-//        {
-//            // Implementation of y_get
-//            return 0;
-//        }
-
-//        static void xy_str(int x, int y, string str)
-//        {
-//            // Implementation of xy_str
-//        }
-
-//        static void y_set(dynamic st, bool flag, int x, int w, int y)
-//        {
-//            // Implementation of y_set
-//        }
-
-
-
-//    static class C
-//    {
-//        public const int CLEF = 1;
-//        public const int KEY = 2;
-//        public const int METER = 3;
-//        public const int STBRK = 4;
-//        public const int BAR = 5;
-//        public const int NOTE = 6;
-//        public const int STAVES = 7;
-//    }
-
-
-///***********************************************/
-
-//        static Dictionary<string, string> dd_tb = new Dictionary<string, string>();
-//        static Action<object> a_de;
-//        static object cross;
-
-//        static Dictionary<string, string> decos = new Dictionary<string, string>()
-//    {
-//        { "dot", "0 stc 6 1.5 1" },
-//        { "tenuto", "0 emb 6 4 3" }
-//    };
-
-//        static List<Action<object>> f_near = new List<Action<object>>()
-//    {
-//        d_test1, d_test2, d_test3
-//    };
-
-//        static List<Action<object>> f_note = new List<Action<object>>()
-//    {
-//        null, null, null,
-//        d_test4,
-//        d_test4
-//    };
-
-//        static List<Action<object>> f_staff = new List<Action<object>>()
-//    {
-//        null, null, null, null, null,
-//        d_test4,
-//        d_test4,
-//        d_test4
-//    };
-
-//        static void d_test1(object de)
-//        {
-//            if (de.start) { d_trill(de); return; }
-//        }
-
-//        static void d_test2(object de)
-//        {
-//            if (de.start) { d_trill(de); return; }
-//        }
-
-//        static void d_test3(object de)
-//        {
-//            if (de.start) { d_trill(de); return; }
-//        }
-
-//        static void d_test4(object de)
-//        {
-//            if (de.start) { d_trill(de); return; }
-//        }
-
-
-
-
-        }
 
 
     }
+
+
+}

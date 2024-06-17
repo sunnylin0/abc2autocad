@@ -181,6 +181,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <TypeScriptCompile Include="Script2.ts" />
     <TypeScriptCompile Include="Script1.ts" />
     <TypeScriptCompile Include="src\aa2.ts" />
     <TypeScriptCompile Include="src\abcIndex.ts" />

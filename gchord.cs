@@ -378,8 +378,10 @@ namespace autocad_part2
         void draw_all_chsy()
         {
             VoiceItem s;
-            string word, p, ly;
-            int i, j, ly, dfnt, ln, c, cf;
+            string word, p;
+            int i, j,  ln, c;
+            LyricsItem ly;
+                Font dfnt,cf;
 
             if (curvoice.ignore)
                 return;
@@ -510,7 +512,7 @@ namespace autocad_part2
                 }
                 if (!string.IsNullOrEmpty(word) && (s.pos.voc & 0x07) != C.SL_HIDDEN)
                 {
-                    ly = new
+                    ly = new LyricsItem
                     {
                         t = word,
                         font = cf,

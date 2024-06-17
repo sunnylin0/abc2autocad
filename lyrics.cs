@@ -209,10 +209,10 @@ namespace autocad_part2
         /* -- parse a lyric (vocal) line (w:) -- */
         public void get_lyrics(string text, bool cont)
         {
-            Voice s;
+            VoiceItem s;
             string word, p;
             int i, j, ly, ln, c;
-            Font    cf;
+            Font  cf;
             Font dfnt;
 
             if (curvoice.ignore)
@@ -693,8 +693,8 @@ namespace autocad_part2
             var nly_tb = new Dictionary<int, int>();
             var above_tb = new Dictionary<int, bool>();
             var rv_tb = new Dictionary<int, int>();
-            int top = 0;
-            int bot = 0;
+            double top = 0;
+            double bot = 0;
             int st = -1;
 
             for (v = 0; v < nv; v++)

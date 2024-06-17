@@ -19,6 +19,7 @@
 
 // Decoration objects
 // dd {			// decoration definition (static)
+//  ty				// type
 //	dd_en,			// definition of the ending decoration
 //	dd_st,			// definition of the starting decoration
 //	func,			// function
@@ -28,9 +29,13 @@
 //	inv,			// inverted glyph
 //	name,			// name
 //	str,			// string
+//  w,
 //	wl,			// left width
 //	wr,			// right width
+//  dx,
+//  dy
 // }
+
 // de {			// decoration elements (in an array - one list per music line)
 //	dd,			// definition of the decoration
 //	defl {			// flags
@@ -44,11 +49,15 @@
 //	m,			// note index when note decoration
 //	prev,			// previous decoration (hack for 'tr~~~~~')
 //	s,			// symbol
+//  st,
 //	start,			// start of the decoration (in the ending element)
 //	up,			// above the symbol
 //	val,			// value
 //	x,			// x offset
 //	y,			// y offset
+//  pos
+//  inv
+//  cont		// keep for next line
 // }
 
 var	dd_tb = {},		// definition of the decorations

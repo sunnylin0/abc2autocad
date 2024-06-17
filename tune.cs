@@ -13,7 +13,7 @@ namespace autocad_part2
         VoiceStavesSymbols par_sy = new VoiceStavesSymbols();
         VoiceStavesSymbols cur_sy = new VoiceStavesSymbols();
         List< PageVoiceTune> voice_tb = new List<PageVoiceTune>();
-        var curvoice = new object();
+        PageVoiceTune curvoice = new PageVoiceTune();
         var staves_found = new object();
         var vover = new object();
         VoiceItem tsfirst = new VoiceItem();
@@ -450,12 +450,14 @@ namespace autocad_part2
         // adjust some voice elements
         void voice_adj(object sys_chg = null)
         {
-            object p_voice, s, s2, v, sl;
+            object p_voice, v, sl;
+            VoiceItem s, s2;
 
             // set the duration of the notes under a feathered beam
-            void set_feathered_beam(object s1)
+            void set_feathered_beam(VoiceItem s1)
             {
-                object s, s2, t, d, b, i, a,
+                VoiceItem s, s2;
+                int t, d, b, i, a,
                     d = s1.dur,
                     n = 1;
 
@@ -551,19 +553,19 @@ namespace autocad_part2
                         && s.time != null            // not at start of tune
                         && (s.prev == null || s.time > s.prev.time + s.prev.dur))
                     {
-                        s2 = new Dictionary<string, object>
+                        s2 = new VoiceItem
                             {
-                                { "type", C.BAR },
-                                { "bar_type", "[]" },
-                                { "v", s.v },
-                                { "p_v", s.p_v },
-                                { "st", s.st },
-                                { "time", s.time },
-                                { "dur", 0 },
-                                { "next", s },
-                                { "prev", s.prev },
-                                { "fmt", s.fmt },
-                                { "invis", true }
+                                type= C.BAR ,
+                                bar_type= "[]" ,
+                                v= s.v ,
+                                p_v= s.p_v ,
+                                st= s.st ,
+                                time= s.time ,
+                                dur= 0 ,
+                                next= s ,
+                                prev= s.prev ,
+                                fmt= s.fmt ,
+                                invis= true 
                             };
                         if (s.prev != null)
                             s.prev.next = s2;
@@ -979,7 +981,7 @@ namespace autocad_part2
         // The value may be
         // - [+|-]<number of semitones>[s|f]
         // - <note1>[<note2>]  % <note2> default is 'c'
-        void get_transp(object param)
+        int  get_transp(object param)
         {
             if (param.ToString()[0] == '0')
                 return 0;

@@ -85,7 +85,7 @@ namespace autocad_part2
         static object psvg;
 
         // utilities
-        static object clone(object obj, int? lvl = null)
+        static object clone(object obj, int lvl = 0)
         {
             if (obj == null)
                 return obj;
@@ -93,7 +93,7 @@ namespace autocad_part2
             var tmp = Activator.CreateInstance(obj.GetType());
             foreach (var k in obj.GetType().GetProperties())
             {
-                if (lvl.HasValue && lvl.Value > 0 && k.PropertyType.IsClass)
+                if (/*lvl.HasValue && lvl.Value > 0 &&*/ k.PropertyType.IsClass)
                     k.SetValue(tmp, clone(k.GetValue(obj), lvl - 1));
                 else
                     k.SetValue(tmp, k.GetValue(obj));
@@ -103,7 +103,7 @@ namespace autocad_part2
 
         static void errbld(int sev, string txt, string fn = null, int? idx = null)
         {
-            int i, j, l, c;
+            int i, j, l=0, c=0;
             string h;
             string outsev;
 

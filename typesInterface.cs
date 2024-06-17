@@ -29,7 +29,7 @@ namespace autocad_part2
        public double wr { get; set; }
        public double wl { get; set; }
        public int st { get; set; }
-       public List<DecorationItem> a_dd { get; set; }
+       public List<DecorationDef> a_dd { get; set; }
        public List<LyricsItem> a_ly { get; set; }
        public List<GChordItem> a_gch { get; set; }
        public VoiceItem next { get; set; }

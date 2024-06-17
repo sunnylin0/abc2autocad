@@ -471,10 +471,20 @@ namespace autocad_part2
         public int jo { get; set; }
         public int acc { get; set; }
         public bool invis { get; set; }
-        public List<DecorationItem> a_dd { get; set; }
+        public List<DecorationDef> a_dd { get; set; }
+    }
+    public class MinMaxDeco
+    {
+        public double ymin { get; set; }
+        public double ymax { get; set; }
+    }
+    public class MinMaxChord
+    {
+        public double ydn { get; set; }
+        public double yup { get; set; }
     }
 
-    public class DecorationItem
+    public class DecorationDef
     {
         public string name { get; set; }
         public int func { get; set; }
@@ -483,19 +493,41 @@ namespace autocad_part2
         public int hd { get; set; }
         public double wl { get; set; }
         public double wr { get; set; }
-        public int dx { get; set; }
-        public int dy { get; set; }
+        public double dx { get; set; }
+        public double dy { get; set; }
         public string str { get; set; }
         public int ty { get; set; }
-        public int x { get; set; }
-        public int y { get; set; }
+        public double x { get; set; }
+        public double y { get; set; }
         public bool inv { get; set; }
         public bool has_val { get; set; }
-        public int val { get; set; }
-        public DecorationItem dd_st { get; set; }
-        public DecorationItem dd_en { get; set; }
+        public DecorationDef dd_st { get; set; }
+        public DecorationDef dd_en { get; set; }
     }
 
+    public class DecorationElement
+    {
+        public DecorationDef dd { get; set; }
+        public (bool noen, bool nost) defl { get; set; }
+
+        public bool has_val { get; set; }
+        public int ix { get; set; }
+        public bool lden { get; set; }
+        public bool ldst { get; set; }
+
+        public int m { get; set; }
+        public DecorationElement prev { get; set; }
+        public VoiceItem s { get; set; }
+        public int st { get; set; }
+        public DecorationElement start { get; set; }
+        public bool up { get; set; }
+        public double val { get; set; }
+        public double x { get; set; }
+        public double y { get; set; }
+        public int pos { get; set; }
+        public bool inv { get; set; }
+        public bool cont { get; set; }
+    }
     public class LyricsItem
     {
         public string t { get; set; }
@@ -602,7 +634,7 @@ namespace autocad_part2
         public double wr { get; set; }
         public double wl { get; set; }
         public int st { get; set; }
-        public List<DecorationItem> a_dd { get; set; }
+        public List<DecorationDef> a_dd { get; set; }
         public List<LyricsItem> a_ly { get; set; }
         public List<GChordItem> a_gch { get; set; }
         public VoiceItem next { get; set; }
@@ -878,7 +910,7 @@ namespace autocad_part2
         public double wr { get; set; }
         public double wl { get; set; }
         public int st { get; set; }
-        public List<DecorationItem> a_dd { get; set; }
+        public List<DecorationDef> a_dd { get; set; }
         public List<LyricsItem> a_ly { get; set; }
         public List<GChordItem> a_gch { get; set; }
         public VoiceItem next { get; set; }

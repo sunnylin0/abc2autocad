@@ -1824,7 +1824,7 @@ namespace autocad_part2
         }
 
         // find where to start a long decoration
-        int prev_scut(VoiceItem s)
+        VoiceItem prev_scut(VoiceItem s)
         {
             while (s.prev != null)
             {
@@ -1888,9 +1888,9 @@ namespace autocad_part2
         }
 
         /* -- output a slur / tie -- */
-        void slur_out(int x1, int y1, int x2, int y2, int dir, int height, bool dotted)
+        void slur_out(double x1, double y1, double x2, double y2, int dir, double height, bool dotted)
         {
-            int dx, dy, dz;
+            double dx, dy, dz;
             double alfa = .3;
             double beta = .45;
 
@@ -1906,26 +1906,26 @@ namespace autocad_part2
                     alfa = .7;
             }
 
-            int mx = (int)(.5 * (x1 + x2));
-            int my = (int)(.5 * (y1 + y2));
-            int xx1 = (int)(mx + alfa * (x1 - mx));
-            int yy1 = (int)(my + alfa * (y1 - my) + height);
-            xx1 = x1 + (int)(beta * (xx1 - x1));
-            yy1 = y1 + (int)(beta * (yy1 - y1));
+            double mx = (.5 * (x1 + x2));
+            double my = (.5 * (y1 + y2));
+            double xx1 = (mx + alfa * (x1 - mx));
+            double yy1 = (my + alfa * (y1 - my) + height);
+            xx1 = x1 + (beta * (xx1 - x1));
+            yy1 = y1 + (beta * (yy1 - y1));
 
-            int xx2 = (int)(mx + alfa * (x2 - mx));
-            int yy2 = (int)(my + alfa * (y2 - my) + height);
-            xx2 = x2 + (int)(beta * (xx2 - x2));
-            yy2 = y2 + (int)(beta * (yy2 - y2));
+            double xx2 = (mx + alfa * (x2 - mx));
+            double yy2 = (my + alfa * (y2 - my) + height);
+            xx2 = x2 + (beta * (xx2 - x2));
+            yy2 = y2 + (beta * (yy2 - y2));
 
             dy = 2 * dir;
-            dz = (int)(.2 + .001 * dx);
+            dz = (.2 + .001 * dx);
             if (dz > .6)
                 dz = .6;
             dz *= dir;
-            dx *= (int).03;
+            dx *= .03;
 
-            int scale_y = 1;
+            double scale_y = 1;
             if (!dotted)
                 output += "<path d=\"M";
             else
@@ -1961,7 +1961,7 @@ namespace autocad_part2
             bool recurr)    // recurrent call when slur on two staves
         {
             int i, k, g;
-                double x1, y1, x2, y2, height, y, z, h, dx, dy;
+            double x1, y1, x2, y2, height, y, z, h, dx, dy;
             int addy, s_st2, a;
             string ty = sl.type.Value;
             int dir = (ty & 0x07) == C.SL_ABOVE ? 1 : -1;
@@ -4395,13 +4395,13 @@ namespace autocad_part2
             public int? measrepnb { get; set; }
         }
 
-        public class PageVoiceTune
-        {
-            public string stafflines { get; set; }
-            public int? topbar { get; set; }
-            public int? botbar { get; set; }
-            public int? scale { get; set; }
-        }
+        //public class PageVoiceTune
+        //{
+        //    public string stafflines { get; set; }
+        //    public int? topbar { get; set; }
+        //    public int? botbar { get; set; }
+        //    public int? scale { get; set; }
+        //}
 
         public class Program
         {
